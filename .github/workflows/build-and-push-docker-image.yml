@@ -26,8 +26,18 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           build-args: |
-            PYTHON_VERSION:=${{ vars.PYTHON_VERSION }}
+            ENTRYPOINT_SCRIPTS_VERSION=${{ vars.ENTRYPOINT_SCRIPTS_VERSION }}
+            GUNICORN_VERSION=${{ vars.GUNICORN_VERSION }}
+            OPENJPEG_URL=${{ vars.OPENJPEG_URL }}
+            OPENJPEG_VERSION=${{ vars.OPENJPEG_VERSION }}
+            PIMS_REVISION=${{ github.sha }}
+            PIMS_VERSION=${{ github.ref_name }}
+            PY_VERSION=${{ vars.PYTHON_VERSION }}
+            SETUPTOOLS_VERSION=${{ vars.SETUPTOOLS_VERSION }}
+            UBUNTU_VERSION=${{ vars.UBUNTU_VERSION }}
+            VIPS_URL=${{ vars.VIPS_URL }}
+            VIPS_VERSION=${{ vars.VIPS_VERSION }}
           context: .
           file: ./docker/backend.dockerfile
           push: true
-          tags: cytomineuliege/pims:${{ github.ref_name }}
+          tags: cytomineuliege/pims:${{ github.ref_name }}-community-plugins
