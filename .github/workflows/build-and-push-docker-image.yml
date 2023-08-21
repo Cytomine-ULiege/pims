@@ -47,7 +47,7 @@ jobs:
         with:
           build-args: |
             FROM_NAMESPACE=cytomineuliege
-            FROM_VERSION=${{ github.ref_name }}
+            FROM_VERSION=${{ github.ref_name }}-community-plugins
           context: .
           file: ./docker/worker.dockerfile
           push: true
