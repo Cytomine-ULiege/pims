@@ -29,12 +29,13 @@ from shutil import rmtree
 from setuptools import Command, find_packages, setup
 
 # Package meta-data.
-NAME = 'pims'
+NAME = 'cytomine-pims'
 REQUIRES_PYTHON = '>=3.8.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     'uvicorn[standard]>=0.13.4',
+    'asgiref>=3.4.1',
     'fastapi>=0.65.1,<=0.68.2',
     'pydantic>=1.8.2',
     'orjson>=3.6.5',
@@ -46,10 +47,10 @@ REQUIRED = [
     'aiofiles>=0.7.0',
     'aioredis[hiredis]>=2.0.0',
     'celery>=5.0.0',
-
+    'matplotlib>=3.5.0',
     'Pint>=0.17',
-    'numpy>=1.20.1',
-    'Pillow>=8.0.0',
+    'numpy>=1.24.1',
+    'Pillow>=9.1.1',
     'pyvips>=2.1.14',
     'tifffile>=2021.11.2',
     'imagecodecs>=2021.3.31',
@@ -63,7 +64,7 @@ REQUIRED = [
     'rasterio>=1.2.1',
 
     # Must be at end to work with dependency links
-    'cytomine-python-client>=2.8.3',
+    'Cytomine-python-client>=2.8.3',
 ]
 
 DEPENDENCY_LINKS = [
@@ -84,7 +85,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 # Load the package's __version__.py module as a dictionary.
 about = {}
-project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
+project_slug = 'pims'
 with open(os.path.join(here, project_slug, '__version__.py')) as f:
     exec(f.read(), about)
 
@@ -136,7 +137,7 @@ class UploadCommand(Command):
 
 # Where the magic happens:
 setup(
-    name=about['__title__'],
+    name=NAME,
     version=about['__version__'],
     description=about['__description__'],
     long_description=long_description,
