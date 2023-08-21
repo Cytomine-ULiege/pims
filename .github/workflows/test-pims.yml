@@ -18,6 +18,9 @@ jobs:
       - name: Set up the repository
         uses: actions/checkout@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -41,6 +44,9 @@ jobs:
           load: true
           tags: cytomineuliege/pims:${{ env.PIMS_VERSION }}
 
+      - name: Show docker image
+        run: docker images
+
       - name: Build test image
         uses: docker/build-push-action@v4
         with:
@@ -49,6 +55,7 @@ jobs:
             VERSION=${{ env.PIMS_VERSION }}
           context: .
           file: ./docker/test.dockerfile
+          load: true
           tags: cytomineuliege/pims:${{ env.TEST_VERSION }}
 
       - name: Run tests
