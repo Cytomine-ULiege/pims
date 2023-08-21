@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push pims
         uses: docker/build-push-action@v4
         with:
           build-args: |
@@ -41,3 +41,14 @@ jobs:
           file: ./docker/backend.dockerfile
           push: true
           tags: cytomineuliege/pims:${{ github.ref_name }}-community-plugins
+
+      - name: Build and push pims-worker
+        uses: docker/build-push-action@v4
+        with:
+          build-args: |
+            FROM_NAMESPACE=cytomineuliege
+            FROM_VERSION=${{ github.ref_name }}
+          context: .
+          file: ./docker/worker.dockerfile
+          push: true
+          tags: cytomineuliege/pims-worker:${{ github.ref_name }}-community-plugins
