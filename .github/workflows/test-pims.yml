@@ -7,7 +7,8 @@ on:
 
 env:
   REPORT: test-report.xml
-  VERSION: test
+  PIMS_VERSION: 0.0.0
+  TEST_VERSION: test
 
 jobs:
   test-pims:
@@ -29,7 +30,7 @@ jobs:
             OPENJPEG_URL=${{ vars.OPENJPEG_URL }}
             OPENJPEG_VERSION=${{ vars.OPENJPEG_VERSION }}
             PIMS_REVISION=${{ github.sha }}
-            PIMS_VERSION=${{ env.VERSION }}
+            PIMS_VERSION=${{ env.PIMS_VERSION }}
             PY_VERSION=${{ vars.PYTHON_VERSION }}
             SETUPTOOLS_VERSION=${{ vars.SETUPTOOLS_VERSION }}
             UBUNTU_VERSION=${{ vars.UBUNTU_VERSION }}
@@ -37,21 +38,22 @@ jobs:
             VIPS_VERSION=${{ vars.VIPS_VERSION }}
           context: .
           file: ./docker/backend.dockerfile
-          tags: cytomineuliege/pims:${{ env.VERSION }}
+          load: true
+          tags: cytomineuliege/pims:${{ env.PIMS_VERSION }}
 
       - name: Build test image
         uses: docker/build-push-action@v4
         with:
           build-args: |
             NAMESPACE=${{ vars.NAMESPACE }}
-            VERSION=${{ env.VERSION }}
+            VERSION=${{ env.PIMS_VERSION }}
           context: .
           file: ./docker/test.dockerfile
-          tags: cytomineuliege/pims:${{ env.VERSION }}
+          tags: cytomineuliege/pims:${{ env.TEST_VERSION }}
 
       - name: Run tests
         run: |
-          docker run --name test-pims cytomineuliege/pims:${{ env.VERSION }}
+          docker run --name test-pims cytomineuliege/pims:${{ env.TEST_VERSION }}
           docker cp test-pims:/app/${{ env.REPORT }} ./${{ env.REPORT }}
 
       - name: Upload tests report
