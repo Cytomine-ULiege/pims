@@ -1,0 +1,62 @@
+name: Test PIMS
+
+on:
+  pull_request:
+    branches:
+      - master
+
+env:
+  REPORT: test-report.xml
+  VERSION: test
+
+jobs:
+  test-pims:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up the repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build pims
+        uses: docker/build-push-action@v4
+        with:
+          build-args: |
+            ENTRYPOINT_SCRIPTS_VERSION=${{ vars.ENTRYPOINT_SCRIPTS_VERSION }}
+            GUNICORN_VERSION=${{ vars.GUNICORN_VERSION }}
+            OPENJPEG_URL=${{ vars.OPENJPEG_URL }}
+            OPENJPEG_VERSION=${{ vars.OPENJPEG_VERSION }}
+            PIMS_REVISION=${{ github.sha }}
+            PIMS_VERSION=${{ env.VERSION }}
+            PY_VERSION=${{ vars.PYTHON_VERSION }}
+            SETUPTOOLS_VERSION=${{ vars.SETUPTOOLS_VERSION }}
+            UBUNTU_VERSION=${{ vars.UBUNTU_VERSION }}
+            VIPS_URL=${{ vars.VIPS_URL }}
+            VIPS_VERSION=${{ vars.VIPS_VERSION }}
+          context: .
+          file: ./docker/backend.dockerfile
+          tags: cytomineuliege/pims:${{ env.VERSION }}
+
+      - name: Build test image
+        uses: docker/build-push-action@v4
+        with:
+          build-args: |
+            NAMESPACE=${{ vars.NAMESPACE }}
+            VERSION=${{ env.VERSION }}
+          context: .
+          file: ./docker/test.dockerfile
+          tags: cytomineuliege/pims:${{ env.VERSION }}
+
+      - name: Run tests
+        run: |
+          docker run --name test-pims cytomineuliege/pims:${{ env.VERSION }}
+          docker cp test-pims:/app/${{ env.REPORT }} ./${{ env.REPORT }}
+
+      - name: Upload tests report
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.REPORT }}
+          path: ${{ env.REPORT }}
+          retention-days: 30
