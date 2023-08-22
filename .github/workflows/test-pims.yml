@@ -51,6 +51,8 @@ jobs:
             UBUNTU_VERSION=${{ vars.UBUNTU_VERSION }}
             VIPS_URL=${{ vars.VIPS_URL }}
             VIPS_VERSION=${{ vars.VIPS_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           context: .
           file: ./docker/backend.dockerfile
           labels: ${{ steps.meta.outputs.labels }}
@@ -68,9 +70,9 @@ jobs:
         password: ${{ github.token }}
 
     steps:
-      - name: Check files
-        run: ls -la
-        
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Set up pytest
         run: pip install pytest
 
