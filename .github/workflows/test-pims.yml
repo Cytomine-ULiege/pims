@@ -91,9 +91,15 @@ jobs:
 
     steps:
       - name: Delete pims test image from registry
-        uses: actions/delete-package-versions@v4
+        uses: actions/github-script@v6
         with:
-          min-versions-to-keep: 0
-          owner: ${{ github.repository_owner }}
-          package-name: "pims"
-          package-type: "container"
+          script: |
+            try {
+              github.rest.packages.deletePackageForOrg({
+                org: context.repo.owner,
+                package_type: "container",
+                package_name: "pims",
+              });
+            } catch (error) {
+              core.setFailed(error.message);
+            }
