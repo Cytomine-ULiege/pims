@@ -68,7 +68,7 @@ jobs:
         password: ${{ github.token }}
 
     steps:
-      - name: Checkout repository
+      - name: Set up the repository
         uses: actions/checkout@v3
 
       - name: Set up pytest
@@ -78,8 +78,22 @@ jobs:
         run: pytest tests --junitxml=${{ env.REPORT }}
 
       - name: Upload tests report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPORT }}
           path: ${{ env.REPORT }}
           retention-days: 30
+
+  clean-pims:
+    runs-on: ubuntu-latest
+    needs:
+      - test-pims
+
+    steps:
+      - name: Delete pims test image from registry
+        uses: actions/delete-package-versions@v4
+        with:
+          min-versions-to-keep: 0
+          owner: ${{ github.repository_owner }}
+          package-name: "pims"
+          package-type: "container"
