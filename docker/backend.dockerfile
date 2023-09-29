@@ -137,11 +137,12 @@ RUN pip install --no-cache-dir gunicorn==${GUNICORN_VERSION} && \
     python plugins.py \
    --plugin_csv /app/plugins.csv \
    --install_path ${PLUGIN_INSTALL_PATH} \
-   --method install
+   --method install && \
+    rm -f /app/plugins.csv
 
 # Add default config
 COPY ./pims-config.env /app/pims-config.env
-COPY ./logging-prod.yml /app/logging-prod.yml
+COPY ./logging-prod.yml /app/logging.yml
 COPY ./docker/gunicorn_conf.py /app/gunicorn_conf.py
 
 COPY ./docker/start.sh /start.sh
@@ -162,7 +163,8 @@ ARG ENTRYPOINT_SCRIPTS_VERSION=1.3.0
 ARG GUNICORN_VERSION=20.1.0
 ARG OPENJPEG_URL=https://github.com/uclouvain/openjpeg/archive
 ARG OPENJPEG_VERSION=2.4.0
-ARG PIMS_REVISION
+ARG PIMS_PACKAGE_REVISION
+ARG PIMS_PACKAGE_VERSION
 ARG PIMS_VERSION
 ARG PLUGIN_CSV=scripts/plugin-list.csv
 ARG PY_VERSION=3.8
@@ -180,8 +182,9 @@ LABEL org.opencontainers.image.authors='support@cytomine.com' \
       org.opencontainers.image.deps.gunicorn.version=${GUNICORN_VERSION} \
       org.opencontainers.image.deps.openjpeg.url=${OPENJPEG_URL} \
       org.opencontainers.image.deps.openjpeg.version=${OPENJPEG_VERSION} \
-      org.opencontainers.image.version=${PIMS_VERSION} \
-      org.opencontainers.image.revision=${PIMS_REVISION} \
+      org.opencontainers.image.deps.pims.version=${PIMS_VERSION} \
+      org.opencontainers.image.version=${PIMS_PACKAGE_VERSION} \
+      org.opencontainers.image.revision=${PIMS_PACKAGE_REVISION} \
       org.opencontainers.image.plugin.csv=${PLUGIN_CSV} \
       org.opencontainers.image.deps.setuptools.version=${SETUPTOOLS_VERSION} \
       org.opencontainers.image.deps.ubuntu.version=${UBUNTU_VERSION} \
