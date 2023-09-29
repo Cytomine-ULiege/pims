@@ -52,3 +52,20 @@ jobs:
           file: ./docker/worker.dockerfile
           push: true
           tags: cytomineuliege/pims-worker:${{ github.ref_name }}-community-plugins
+
+      - name: Release check
+        id: release
+        run: |
+          if [[ ${{ github.ref_name }} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "release=true" >> $GITHUB_OUTPUT
+          else
+            echo "release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Tag latest for official release
+        if: steps.release.outputs.release == 'true'
+        run: |
+          docker tag cytomineuliege/pims:${{ github.ref_name }}-community-plugins cytomineuliege/pims:latest
+          docker tag cytomineuliege/pims-worker:${{ github.ref_name }}-community-plugins cytomineuliege/pims-worker:latest
+          docker push cytomineuliege/pims:latest
+          docker push cytomineuliege/pims-worker:latest
