@@ -22,6 +22,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Release check
+        id: release
+        run: |
+          if [[ ${{ github.ref_name }} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "release=true" >> $GITHUB_OUTPUT
+          else
+            echo "release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cytomineuliege/pims
+          tags: |
+            type=raw,value=${{ github.ref_name }}-community-plugins
+            type=raw,value=latest,enable=${{ steps.release.outputs.release }}
+
       - name: Build and push pims
         uses: docker/build-push-action@v4
         with:
@@ -39,8 +57,18 @@ jobs:
             VIPS_VERSION=${{ vars.VIPS_VERSION }}
           context: .
           file: ./docker/backend.dockerfile
+          labels: ${{ steps.meta.outputs.labels }}
           push: true
-          tags: cytomineuliege/pims:${{ github.ref_name }}-community-plugins
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta-worker
+        uses: docker/metadata-action@v5
+        with:
+          images: cytomineuliege/pims-worker
+          tags: |
+            type=raw,value=${{ github.ref_name }}-community-plugins
+            type=raw,value=latest,enable=${{ steps.release.outputs.release }}
 
       - name: Build and push pims-worker
         uses: docker/build-push-action@v4
@@ -50,22 +78,6 @@ jobs:
             FROM_VERSION=${{ github.ref_name }}-community-plugins
           context: .
           file: ./docker/worker.dockerfile
+          labels: ${{ steps.meta-worker.outputs.labels }}
           push: true
-          tags: cytomineuliege/pims-worker:${{ github.ref_name }}-community-plugins
-
-      - name: Release check
-        id: release
-        run: |
-          if [[ ${{ github.ref_name }} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "release=true" >> $GITHUB_OUTPUT
-          else
-            echo "release=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Tag latest for official release
-        if: steps.release.outputs.release == 'true'
-        run: |
-          docker tag cytomineuliege/pims:${{ github.ref_name }}-community-plugins cytomineuliege/pims:latest
-          docker tag cytomineuliege/pims-worker:${{ github.ref_name }}-community-plugins cytomineuliege/pims-worker:latest
-          docker push cytomineuliege/pims:latest
-          docker push cytomineuliege/pims-worker:latest
+          tags: ${{ steps.meta-worker.outputs.tags }}
