@@ -1,17 +1,19 @@
-from PIL import Image
-import os
-import urllib.request
 import io
-from tests.utils.formats import (
-    thumb_test,
-    resized_test,
-    mask_test,
-    crop_test,
-    crop_null_annot_test,
-    histogram_perimage_test,
-)
-import pytest
+import os
 import subprocess
+import urllib.request
+
+import pytest
+from PIL import Image
+
+from tests.utils.formats import (
+    crop_null_annot_test,
+    crop_test,
+    histogram_perimage_test,
+    mask_test,
+    resized_test,
+    thumb_test,
+)
 
 
 def get_image(path, filename, root):
@@ -26,9 +28,9 @@ def get_image(path, filename, root):
 
     if not os.path.exists(f"/tmp/images/{filename}"):
         try:
-            url = f"https://data.cytomine.coop/open/tests/Test%20special%20char%20%25(_!.tiff"
+            url = "https://data.cytomine.coop/open/tests/Test%20special%20char%20%25(_!.tiff"
             urllib.request.urlretrieve(url, f"/tmp/images/{filename}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print("Could not download image")
             print(e)
     print(os.path.exists(filepath))
@@ -36,9 +38,13 @@ def get_image(path, filename, root):
         # os.mkdir(path)
         image_path = f"/tmp/images/{filename}"
         pims_root = root
-        importer_path = f"/app/pims/importer/import_local_images.py"  # pims folder should be in root folder
-        import_img = subprocess.run(
-            ["python3", importer_path, "--path", image_path], stdout=subprocess.PIPE
+
+        # pims folder should be in root folder
+        importer_path = "/app/pims/importer/import_local_images.py"
+        subprocess.run(
+            ["python3", importer_path, "--path", image_path],
+            stdout=subprocess.PIPE,
+            check=False,
         )
 
         subdirs = os.listdir(pims_root)
@@ -58,12 +64,14 @@ def get_image(path, filename, root):
         print(os.path.exists(root))  # existe
         os.symlink(upload_dir, path)
 
+
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
 def test_exists(image_path_excentric_filename, root):
     path, filename = image_path_excentric_filename
     get_image(path, filename, root)
-    assert os.path.exists(os.path.join(path, filename)) == True
+    assert os.path.exists(os.path.join(path, filename)) is True
+
 
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
@@ -76,10 +84,11 @@ def test_info(client, image_path_excentric_filename):
     assert response.json()["image"]["width"] == 46000
     assert response.json()["image"]["height"] == 32914
 
+
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
 def test_norm_tile(client, image_path_excentric_filename):
-    path, filename = image_path_excentric_filename
+    _, filename = image_path_excentric_filename
     response = client.get(
         f"/image/upload_test_excentric/{filename}/normalized-tile/zoom/1/ti/0",
         headers={"accept": "image/jpeg"},
@@ -92,11 +101,13 @@ def test_norm_tile(client, image_path_excentric_filename):
     assert width_resp == 256
     assert height_resp == 256
 
+
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
 def test_thumb(client, image_path_excentric_filename):
     _, filename = image_path_excentric_filename
     thumb_test(client, filename, "excentric")
+
 
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
@@ -104,11 +115,13 @@ def test_resized(client, image_path_excentric_filename):
     _, filename = image_path_excentric_filename
     resized_test(client, filename, "excentric")
 
+
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
 def test_mask(client, image_path_excentric_filename):
     _, filename = image_path_excentric_filename
     mask_test(client, filename, "excentric")
+
 
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")
@@ -116,10 +129,12 @@ def test_crop(client, image_path_excentric_filename):
     _, filename = image_path_excentric_filename
     crop_test(client, filename, "excentric")
 
+
 @pytest.mark.skip(reason="Does not return the correct response code")
 def test_crop_null_annot(client, image_path_excentric_filename):
     _, filename = image_path_excentric_filename
     crop_null_annot_test(client, filename, "excentric")
+
 
 # TODO investigate
 @pytest.mark.skip(reason="currently failing without apparent reason")

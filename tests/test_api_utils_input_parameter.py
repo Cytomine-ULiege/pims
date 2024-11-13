@@ -15,7 +15,11 @@
 import pytest
 
 from pims.api.exceptions import BadRequestException
-from pims.api.utils.input_parameter import check_reduction_validity, parse_planes, parse_region
+from pims.api.utils.input_parameter import (
+    check_reduction_validity,
+    parse_planes,
+    parse_region,
+)
 from pims.api.utils.models import TierIndexType
 from pims.processing.region import Region
 from tests.conftest import not_raises
@@ -26,12 +30,12 @@ def test_parse_planes():
     assert parse_planes([], 10) == [0]
     assert parse_planes([1, 2], 10) == [1, 2]
     assert parse_planes([1, 2, 200], 10) == [1, 2]
-    assert parse_planes([2, '5:'], 8) == [2, 5, 6, 7]
-    assert parse_planes([':'], 3) == [0, 1, 2]
+    assert parse_planes([2, "5:"], 8) == [2, 5, 6, 7]
+    assert parse_planes([":"], 3) == [0, 1, 2]
     assert parse_planes([], 10, default=[1, 2]) == [1, 2]
 
     with pytest.raises(BadRequestException):
-        parse_planes([2, '5:', 'foo'], 10)
+        parse_planes([2, "5:", "foo"], 10)
 
 
 def test_check_reduction_validity():
@@ -45,27 +49,32 @@ def test_check_reduction_validity():
 
 
 def test_parse_region():
-    img = FakeImagePyramid(1000, 2000, 3)
+    image = FakeImagePyramid(1000, 2000, 3)
+    region = {"top": 100, "left": 50, "width": 128, "height": 128}
 
-    region = {'top': 100, 'left': 50, 'width': 128, 'height': 128}
-    assert parse_region(
-        img, **region, tier_idx=0, tier_type=TierIndexType.LEVEL
-    ) == Region(100, 50, 128, 128)
-    assert parse_region(
-        img, **region, tier_idx=1, tier_type=TierIndexType.LEVEL
-    ) == Region(100, 50, 128, 128, downsample=2)
+    actual = parse_region(image, **region, tier_idx=0, tier_type=TierIndexType.LEVEL)
+    expected = Region(100, 50, 128, 128)
+    assert actual == expected
 
-    region = {'top': 0.1, 'left': 0.15, 'width': 0.02, 'height': 0.2}
-    assert parse_region(
-        img, **region, tier_idx=0, tier_type=TierIndexType.LEVEL
-    ) == Region(200, 150, 20, 400)
-    assert parse_region(
-        img, **region, tier_idx=1, tier_type=TierIndexType.LEVEL
-    ) == Region(100, 75, 10, 200, downsample=2)
+    actual = parse_region(image, **region, tier_idx=1, tier_type=TierIndexType.LEVEL)
+    expected = Region(100, 50, 128, 128, downsample=2)
+    assert actual == expected
+
+    region = {"top": 0.1, "left": 0.15, "width": 0.02, "height": 0.2}
+    actual = parse_region(image, **region, tier_idx=0, tier_type=TierIndexType.LEVEL)
+    expected = Region(200, 150, 20, 400)
+    assert actual == expected
+
+    actual = parse_region(image, **region, tier_idx=1, tier_type=TierIndexType.LEVEL)
+    expected = Region(100, 75, 10, 200, downsample=2)
+    assert actual == expected
 
     with pytest.raises(BadRequestException):
-        region = {'top': 100, 'left': 900, 'width': 1280, 'height': 1280}
+        region = {"top": 100, "left": 900, "width": 1280, "height": 1280}
         parse_region(
-            img, **region, tier_idx=0, tier_type=TierIndexType.LEVEL,
-            silent_oob=False
+            image,
+            **region,
+            tier_idx=0,
+            tier_type=TierIndexType.LEVEL,
+            silent_oob=False,
         )

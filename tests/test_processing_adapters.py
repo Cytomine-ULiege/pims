@@ -17,7 +17,12 @@ import pytest
 from PIL import Image as PILImage
 from pyvips import Image as VIPSImage
 
-from pims.processing.adapters import numpy_to_vips, pil_to_numpy, pil_to_vips, vips_to_numpy
+from pims.processing.adapters import (
+    numpy_to_vips,
+    pil_to_numpy,
+    pil_to_vips,
+    vips_to_numpy,
+)
 from pims.utils.vips import vips_format_to_dtype
 
 

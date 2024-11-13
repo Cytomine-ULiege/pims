@@ -16,7 +16,10 @@ import pytest
 
 from pims.api.exceptions import ColormapNotFoundProblem
 from pims.api.utils.models import ColormapEnum, IntensitySelectionEnum
-from pims.api.utils.processing_parameter import parse_colormap_id, parse_intensity_bounds
+from pims.api.utils.processing_parameter import (
+    parse_colormap_id,
+    parse_intensity_bounds,
+)
 from pims.processing.colormaps import ALL_COLORMAPS
 from pims.utils.color import Color
 
@@ -30,92 +33,200 @@ def test_parse_intensity_bounds():
         def channel_bounds(self, channel):
             return [channel, channel + 10]
 
-    assert parse_intensity_bounds(FakeImage(8, 1), [0], [0], [0], [], []) == ([0], [255])
-    assert parse_intensity_bounds(
-        FakeImage(8, 1), [0], [0], [0], [IntensitySelectionEnum.AUTO_IMAGE],
-        [IntensitySelectionEnum.AUTO_IMAGE]
-    ) == ([0], [255])
-    assert parse_intensity_bounds(
-        FakeImage(8, 1), [0], [0], [0], [IntensitySelectionEnum.STRETCH_IMAGE],
-        [IntensitySelectionEnum.STRETCH_IMAGE]
-    ) == ([0], [10])
-    assert parse_intensity_bounds(FakeImage(8, 1), [0], [0], [0], [10], [100]) == ([10], [100])
-    assert parse_intensity_bounds(FakeImage(8, 1), [0], [0], [0], [10], [1000]) == ([10], [255])
+    actual = parse_intensity_bounds(
+        FakeImage(8, 1),
+        [0],
+        [0],
+        [0],
+        [],
+        [],
+    )
+    assert actual == ([0], [255])
 
-    assert parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [], []) == ([0], [65535])
-    assert parse_intensity_bounds(
-        FakeImage(16, 1), [0], [0], [0], [IntensitySelectionEnum.AUTO_IMAGE],
-        [IntensitySelectionEnum.AUTO_IMAGE]
-    ) == ([0], [10])
-    assert parse_intensity_bounds(
-        FakeImage(16, 1), [0], [0], [0], [IntensitySelectionEnum.STRETCH_IMAGE],
-        [IntensitySelectionEnum.STRETCH_IMAGE]
-    ) == ([0], [10])
-    assert parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [10], [100]) == ([10], [100])
-    assert parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [10], [1000]) == ([10], [1000])
-    assert parse_intensity_bounds(
-        FakeImage(16, 1), [0], [0], [0], [10], [100000]
-    ) == ([10], [65535])
+    actual = parse_intensity_bounds(
+        FakeImage(8, 1),
+        [0],
+        [0],
+        [0],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+    )
+    assert actual == ([0], [255])
 
-    assert parse_intensity_bounds(
-        FakeImage(8, 2), [0, 1], [0], [0], [IntensitySelectionEnum.AUTO_IMAGE],
-        [IntensitySelectionEnum.AUTO_IMAGE]
-    ) == ([0, 0], [255, 255])
-    assert parse_intensity_bounds(
-        FakeImage(8, 2), [0, 1], [0], [0], [IntensitySelectionEnum.STRETCH_IMAGE],
-        [IntensitySelectionEnum.STRETCH_IMAGE]
-    ) == ([0, 1], [10, 11])
-    assert parse_intensity_bounds(
-        FakeImage(8, 2), [0, 1], [0], [0], [10], [100]
-    ) == ([10, 10], [100, 100])
-    assert parse_intensity_bounds(
-        FakeImage(8, 2), [0, 1], [0], [0], [10], [1000, 20]
-    ) == ([10, 10], [255, 20])
+    actual = parse_intensity_bounds(
+        FakeImage(8, 1),
+        [0],
+        [0],
+        [0],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+    )
+    assert actual == ([0], [10])
 
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [IntensitySelectionEnum.AUTO_IMAGE],
-        [IntensitySelectionEnum.AUTO_IMAGE]
-    ) == ([0, 1], [10, 11])
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [IntensitySelectionEnum.STRETCH_IMAGE],
-        [IntensitySelectionEnum.STRETCH_IMAGE]
-    ) == ([0, 1], [10, 11])
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [10], [100]
-    ) == ([10, 10], [100, 100])
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [10], [1000, 20]
-    ) == ([10, 10], [1000, 20])
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [10, 5], [100000, 20]
-    ) == ([10, 5], [65535, 20])
-    assert parse_intensity_bounds(
-        FakeImage(16, 2), [0, 1], [0], [0], [10, IntensitySelectionEnum.AUTO_IMAGE],
-        [100000, 20]
-    ) == ([10, 1], [65535, 20])
+    actual = parse_intensity_bounds(FakeImage(8, 1), [0], [0], [0], [10], [100])
+    assert actual == ([10], [100])
+
+    actual = parse_intensity_bounds(FakeImage(8, 1), [0], [0], [0], [10], [1000])
+    assert actual == ([10], [255])
+
+    actual = parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [], [])
+    assert actual == ([0], [65535])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 1),
+        [0],
+        [0],
+        [0],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+    )
+    assert actual == ([0], [10])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 1),
+        [0],
+        [0],
+        [0],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+    )
+    assert actual == ([0], [10])
+
+    actual = parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [10], [100])
+    assert actual == ([10], [100])
+
+    actual = parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [10], [1000])
+    assert actual == ([10], [1000])
+
+    actual = parse_intensity_bounds(FakeImage(16, 1), [0], [0], [0], [10], [100000])
+    assert actual == ([10], [65535])
+
+    actual = parse_intensity_bounds(
+        FakeImage(8, 2),
+        [0, 1],
+        [0],
+        [0],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+    )
+    assert actual == ([0, 0], [255, 255])
+
+    actual = parse_intensity_bounds(
+        FakeImage(8, 2),
+        [0, 1],
+        [0],
+        [0],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+    )
+    assert actual == ([0, 1], [10, 11])
+
+    actual = parse_intensity_bounds(
+        FakeImage(8, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10],
+        [100],
+    )
+    assert actual == ([10, 10], [100, 100])
+
+    actual = parse_intensity_bounds(
+        FakeImage(8, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10],
+        [1000, 20],
+    )
+    assert actual == ([10, 10], [255, 20])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+        [IntensitySelectionEnum.AUTO_IMAGE],
+    )
+    assert actual == ([0, 1], [10, 11])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+        [IntensitySelectionEnum.STRETCH_IMAGE],
+    )
+    assert actual == ([0, 1], [10, 11])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10],
+        [100],
+    )
+    assert actual == ([10, 10], [100, 100])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10],
+        [1000, 20],
+    )
+    assert actual == ([10, 10], [1000, 20])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10, 5],
+        [100000, 20],
+    )
+    assert actual == ([10, 5], [65535, 20])
+
+    actual = parse_intensity_bounds(
+        FakeImage(16, 2),
+        [0, 1],
+        [0],
+        [0],
+        [10, IntensitySelectionEnum.AUTO_IMAGE],
+        [100000, 20],
+    )
+    assert actual == ([10, 1], [65535, 20])
 
 
 def test_parse_colormap_id():
     red = Color("red")
     assert parse_colormap_id(ColormapEnum.NONE, ALL_COLORMAPS, red) is None
-    assert parse_colormap_id(
-        ColormapEnum.DEFAULT, ALL_COLORMAPS, red
-    ).identifier == 'RED'
-    assert parse_colormap_id(
-        ColormapEnum.DEFAULT_INVERTED, ALL_COLORMAPS, red
-    ).identifier == '!RED'
 
-    assert parse_colormap_id('JET', ALL_COLORMAPS, red).identifier == 'JET'
-    assert parse_colormap_id('!JET', ALL_COLORMAPS, red).identifier == '!JET'
+    actual = parse_colormap_id(ColormapEnum.DEFAULT, ALL_COLORMAPS, red).identifier
+    assert actual == "RED"
 
-    assert parse_colormap_id('blue', ALL_COLORMAPS, red).identifier == 'BLUE'
-    assert parse_colormap_id('!blue', ALL_COLORMAPS, red).identifier == '!BLUE'
+    actual = parse_colormap_id(
+        ColormapEnum.DEFAULT_INVERTED,
+        ALL_COLORMAPS,
+        red,
+    ).identifier
+    assert actual == "!RED"
 
-    assert parse_colormap_id('!0x0f0', ALL_COLORMAPS, red).identifier == '!LIME'
+    assert parse_colormap_id("JET", ALL_COLORMAPS, red).identifier == "JET"
+    assert parse_colormap_id("!JET", ALL_COLORMAPS, red).identifier == "!JET"
 
-    assert '#ABCDEF' not in ALL_COLORMAPS
-    assert parse_colormap_id('#abcdef', ALL_COLORMAPS, red).identifier == '#ABCDEF'
-    assert '#ABCDEF' in ALL_COLORMAPS
+    assert parse_colormap_id("blue", ALL_COLORMAPS, red).identifier == "BLUE"
+    assert parse_colormap_id("!blue", ALL_COLORMAPS, red).identifier == "!BLUE"
+
+    assert parse_colormap_id("!0x0f0", ALL_COLORMAPS, red).identifier == "!LIME"
+
+    assert "#ABCDEF" not in ALL_COLORMAPS
+    assert parse_colormap_id("#abcdef", ALL_COLORMAPS, red).identifier == "#ABCDEF"
+    assert "#ABCDEF" in ALL_COLORMAPS
 
     with pytest.raises(ColormapNotFoundProblem):
-        parse_colormap_id('brol', ALL_COLORMAPS, red)
+        parse_colormap_id("brol", ALL_COLORMAPS, red)
