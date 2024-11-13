@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - "pims/**/*.py"
+      - "tests/**/*.py"
 
 env:
   IMAGE_NAME: ${{ github.repository }}
