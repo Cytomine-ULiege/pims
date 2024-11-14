@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 from typing import Any, Optional, Union
 
@@ -26,15 +27,13 @@ log = logging.getLogger("pims")
 
 
 def response_list(list_):
-    """Format a list for response serialization.
-    """
-    return {
-        "items": list_,
-        "size": len(list_)
-    }
+    """Format a list for response serialization."""
+    return {"items": list_, "size": len(list_)}
 
 
-def convert_quantity(quantity: Optional[Quantity], unit: str, ndigits: int = 6) -> Optional[float]:
+def convert_quantity(
+    quantity: Optional[Quantity], unit: str, ndigits: int = 6
+) -> Optional[float]:
     """
     Convert a quantity to the unit required by API specification.
 
@@ -54,22 +53,28 @@ def convert_quantity(quantity: Optional[Quantity], unit: str, ndigits: int = 6) 
     """
     if quantity is None:
         return None
-    elif isinstance(quantity, Quantity):
+
+    if isinstance(quantity, Quantity):
         return round(quantity.to(unit).magnitude, ndigits)
 
     log.warning(
-        f'The quantity {quantity} is not of type Quantity and is thus not converted.'
+        "The quantity %s is not of type Quantity and is thus not converted.",
+        quantity,
     )
     return round(quantity, ndigits)
 
 
 def serialize_cytomine_model(o):
     if isinstance(o, CytomineModel):
-        d = dict((k, v) for k, v in o.__dict__.items() if v is not None and not k.startswith("_"))
+        d = dict(
+            (k, v)
+            for k, v in o.__dict__.items()
+            if v is not None and not k.startswith("_")
+        )
         if "uri_" in d:
             d["uri"] = d.pop("uri_")
         return d
-    log.warning(f"The object {o} is not a Cytomine model and is thus not serialized.")
+    log.warning("The object %s is not a Cytomine model and is thus not serialized.", o)
     return o
 
 
@@ -83,6 +88,7 @@ class FastJsonResponse(ORJSONResponse):
 
     On large responses, it can be 10-30x faster than default FastAPI encoding.
     """
+
     def __init__(
         self,
         content: Any = None,
@@ -124,19 +130,24 @@ class FastJsonResponse(ORJSONResponse):
             if "__root__" in obj_dict:
                 obj_dict = obj_dict["__root__"]
             return obj_dict
-        elif isinstance(o, CytomineModel):
+
+        if isinstance(o, CytomineModel):
             d = dict(
-                (k, v) for k, v in o.__dict__.items()
+                (k, v)
+                for k, v in o.__dict__.items()
                 if v is not None and not k.startswith("_")
             )
             if "uri_" in d:
                 d["uri"] = d.pop("uri_")
             return d
+
         raise TypeError
 
     def render(self, content: Any) -> bytes:
         assert orjson is not None, "orjson must be installed to use ORJSONResponse"
 
         return orjson.dumps(
-            content, option=orjson.OPT_SERIALIZE_NUMPY, default=self.default
+            content,
+            option=orjson.OPT_SERIALIZE_NUMPY,
+            default=self.default,
         )

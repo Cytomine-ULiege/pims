@@ -15,19 +15,34 @@
 from typing import Iterable, List, Optional, Tuple, Type, Union
 
 from pims.api.exceptions import ColormapNotFoundProblem, FilterNotFoundProblem
-from pims.api.utils.models import BitDepthEnum, ColormapEnum, ColormapId, IntensitySelectionEnum
+from pims.api.utils.models import (
+    BitDepthEnum,
+    ColormapEnum,
+    ColormapId,
+    IntensitySelectionEnum,
+)
 from pims.files.image import Image
 from pims.filters import AbstractFilter, FiltersById
 from pims.formats.utils.structures.metadata import ImageChannel
-from pims.processing.colormaps import BLACK_COLORMAP, ColorColormap, Colormap, ColormapsByName
+from pims.processing.colormaps import (
+    BLACK_COLORMAP,
+    ColorColormap,
+    Colormap,
+    ColormapsByName,
+)
 from pims.utils.color import Color
 
 Intensities = List[Union[int, str]]
 
 
 def parse_intensity_bounds(
-    image: Image, out_channels: List[int], out_zslices: List[int], out_timepoints: List[int],
-    min_intensities: Intensities, max_intensities: Intensities, allow_none: bool = False
+    image: Image,
+    out_channels: List[int],
+    out_zslices: List[int],
+    out_timepoints: List[int],
+    min_intensities: Intensities,
+    max_intensities: Intensities,
+    allow_none: bool = False,
 ) -> Tuple[List[int], List[int]]:
     """
     Parse intensity parameters according to a specific image.
@@ -57,7 +72,7 @@ def parse_intensity_bounds(
         Parsed max intensities. List size is the number of channels in the image output.
     """
     bit_depth = image.significant_bits
-    max_allowed_intensity = 2 ** bit_depth - 1
+    max_allowed_intensity = 2**bit_depth - 1
     n_out_channels = len(out_channels)
 
     if len(min_intensities) == 0:
@@ -81,39 +96,38 @@ def parse_intensity_bounds(
             func = min if bound_kind == "minimum" else max
             return func(bounds)
 
-        if type(bound_value) is int:
+        if isinstance(bound_value, int):
             if bound_value < 0:
                 return 0
-            elif bound_value > max_allowed_intensity:
+            if bound_value > max_allowed_intensity:
                 return max_allowed_intensity
-            else:
-                return intensity
-        else:
-            if allow_none and bound_value == "NONE":
+            return intensity
+
+        if allow_none and bound_value == "NONE":
+            return bound_default
+        if bound_value == IntensitySelectionEnum.AUTO_IMAGE:
+            if image.significant_bits <= 8:
                 return bound_default
-            elif bound_value == IntensitySelectionEnum.AUTO_IMAGE:
-                if image.significant_bits <= 8:
-                    return bound_default
-                else:
-                    return image.channel_bounds(c)[bound_kind_idx]
-            elif bound_value == IntensitySelectionEnum.STRETCH_IMAGE:
-                return image.channel_bounds(c)[bound_kind_idx]
-            elif bound_value == IntensitySelectionEnum.AUTO_PLANE:
-                if image.significant_bits <= 8:
-                    return bound_default
-                else:
-                    return stretch_plane()
-            elif bound_value == IntensitySelectionEnum.STRETCH_PLANE:
-                return stretch_plane()
-            else:
+            return image.channel_bounds(c)[bound_kind_idx]
+        if bound_value == IntensitySelectionEnum.STRETCH_IMAGE:
+            return image.channel_bounds(c)[bound_kind_idx]
+        if bound_value == IntensitySelectionEnum.AUTO_PLANE:
+            if image.significant_bits <= 8:
                 return bound_default
+            return stretch_plane()
+        if bound_value == IntensitySelectionEnum.STRETCH_PLANE:
+            return stretch_plane()
+        return bound_default
 
     for idx, (channel, intensity) in enumerate(zip(out_channels, min_intensities)):
         min_intensities[idx] = parse_intensity(channel, intensity, 0, "minimum")
 
     for idx, (channel, intensity) in enumerate(zip(out_channels, max_intensities)):
         max_intensities[idx] = parse_intensity(
-            channel, intensity, max_allowed_intensity, "maximum"
+            channel,
+            intensity,
+            max_allowed_intensity,
+            "maximum",
         )
 
     return min_intensities, max_intensities
@@ -124,20 +138,23 @@ def parse_bitdepth(in_image: Image, bits: Union[int, BitDepthEnum]) -> int:
 
 
 def parse_filter_ids(
-    filter_ids: Iterable[str], existing_filters: FiltersById
+    filter_ids: Iterable[str],
+    existing_filters: FiltersById,
 ) -> List[Type[AbstractFilter]]:
     filters = []
     for filter_id in filter_ids:
         try:
             filters.append(existing_filters[filter_id.upper()])
-        except KeyError:
-            raise FilterNotFoundProblem(filter_id)
+        except KeyError as err:
+            raise FilterNotFoundProblem(filter_id) from err
     return filters
 
 
 def parse_colormap_ids(
-    colormap_ids: List[ColormapId], existing_colormaps: ColormapsByName, channel_idxs: List[int],
-    img_channels: List[ImageChannel]
+    colormap_ids: List[ColormapId],
+    existing_colormaps: ColormapsByName,
+    channel_idxs: List[int],
+    img_channels: List[ImageChannel],
 ) -> List[Union[Colormap, None]]:
     colormaps = []
     if len(colormap_ids) == 0:
@@ -148,14 +165,18 @@ def parse_colormap_ids(
     for i, colormap_id in zip(channel_idxs, colormap_ids):
         colormaps.append(
             parse_colormap_id(
-                colormap_id, existing_colormaps, img_channels[i].color
+                colormap_id,
+                existing_colormaps,
+                img_channels[i].color,
             )
         )
     return colormaps
 
 
 def parse_colormap_id(
-    colormap_id: ColormapId, existing_colormaps: ColormapsByName, default_color: Optional[Color]
+    colormap_id: ColormapId,
+    existing_colormaps: ColormapsByName,
+    default_color: Optional[Color],
 ) -> Optional[Colormap]:
     """
     Parse a colormap ID to a valid colormap (or None).
@@ -185,14 +206,15 @@ def parse_colormap_id(
     """
     if colormap_id == ColormapEnum.NONE:
         return None
-    elif colormap_id == ColormapEnum.DEFAULT:
+
+    if colormap_id == ColormapEnum.DEFAULT:
         if default_color is None:
             return None
         colormap_id = str(default_color).upper()
     elif colormap_id == ColormapEnum.DEFAULT_INVERTED:
         if default_color is None:
-            return existing_colormaps.get('!WHITE')
-        colormap_id = '!' + str(default_color).upper()
+            return existing_colormaps.get("!WHITE")
+        colormap_id = "!" + str(default_color).upper()
     else:
         colormap_id = colormap_id.upper()  # noqa
 
@@ -203,17 +225,15 @@ def parse_colormap_id(
 
         try:
             parsed_color = Color(color)
-        except ValueError:
-            raise ColormapNotFoundProblem(colormap_id)
+        except ValueError as err:
+            raise ColormapNotFoundProblem(colormap_id) from err
 
         colormap = ColorColormap(parsed_color, inverted=inverted)
         existing_colormaps[colormap.identifier] = colormap
     return colormap
 
 
-def parse_gammas(
-    out_channels: List[int], gammas: List[float]
-):
+def parse_gammas(out_channels: List[int], gammas: List[float]):
     """
     Parse gammas parameter.
 
@@ -230,10 +250,11 @@ def parse_gammas(
     """
     if len(gammas) == 0:
         return [1] * len(out_channels)
-    elif len(gammas) == 1:
+
+    if len(gammas) == 1:
         return gammas * len(out_channels)
-    else:
-        return gammas
+
+    return gammas
 
 
 def remove_useless_channels(
@@ -241,7 +262,7 @@ def remove_useless_channels(
     min_intensities: List[int],
     max_intensities: List[int],
     colormaps: List[Colormap],
-    gammas: List[float]
+    gammas: List[float],
 ) -> Tuple[List[int], List[int], List[int], List[Colormap], List[float]]:
     """
     Remove channels with a black colormap, as they will produce a black image
@@ -256,9 +277,9 @@ def remove_useless_channels(
     kept_max_intensities = []
     kept_colormaps = []
     kept_gammas = []
-    for idx, min_intensity, max_intensity, colormap, gamma in \
-            zip(channel_idxs, min_intensities, max_intensities,
-                colormaps, gammas):
+    for idx, min_intensity, max_intensity, colormap, gamma in zip(
+        channel_idxs, min_intensities, max_intensities, colormaps, gammas
+    ):
         intensity_diff = max_intensity - min_intensity
         if colormap != BLACK_COLORMAP and intensity_diff != 0:
             kept_idxs.append(idx)

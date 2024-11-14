@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Dict, Iterable, List, Optional
 
 from shapely.affinity import affine_transform
@@ -25,9 +26,12 @@ from pims.utils.color import Color
 
 
 def parse_annotations(
-    annotations: Iterable[Dict], ignore_fields: Optional[List[str]] = None,
-    default: Optional[Dict] = None, point_envelope_length: Optional[float] = None,
-    origin: AnnotationOrigin = AnnotationOrigin.LEFT_TOP, im_height: Optional[int] = None
+    annotations: Iterable[Dict],
+    ignore_fields: Optional[List[str]] = None,
+    default: Optional[Dict] = None,
+    point_envelope_length: Optional[float] = None,
+    origin: AnnotationOrigin = AnnotationOrigin.LEFT_TOP,
+    im_height: Optional[int] = None,
 ) -> ParsedAnnotations:
     """
     Parse a list of annotations.
@@ -58,9 +62,12 @@ def parse_annotations(
     for annotation in annotations:
         al.append(
             parse_annotation(
-                **annotation, ignore_fields=ignore_fields,
-                default=default, point_envelope_length=point_envelope_length,
-                origin=origin, im_height=im_height
+                **annotation,
+                ignore_fields=ignore_fields,
+                default=default,
+                point_envelope_length=point_envelope_length,
+                origin=origin,
+                im_height=im_height
             )
         )
 
@@ -68,10 +75,15 @@ def parse_annotations(
 
 
 def parse_annotation(
-    geometry: str, fill_color: Optional[Color] = None, stroke_color: Optional[Color] = None,
-    stroke_width: Optional[int] = None, ignore_fields: Optional[List[str]] = None,
-    default: Optional[Dict] = None, point_envelope_length: float = 1.0,
-    origin: AnnotationOrigin = AnnotationOrigin.LEFT_TOP, im_height: Optional[int] = None
+    geometry: str,
+    fill_color: Optional[Color] = None,
+    stroke_color: Optional[Color] = None,
+    stroke_width: Optional[int] = None,
+    ignore_fields: Optional[List[str]] = None,
+    default: Optional[Dict] = None,
+    point_envelope_length: float = 1.0,
+    origin: AnnotationOrigin = AnnotationOrigin.LEFT_TOP,
+    im_height: Optional[int] = None,
 ) -> ParsedAnnotation:
     """
     Parse an annotation.
@@ -112,14 +124,14 @@ def parse_annotation(
         ignore_fields = []
 
     if default is None:
-        default = dict()
+        default = {}
 
     try:
         geom = wkt_loads(geometry)
-    except WKTReadingError:
-        raise InvalidGeometryException(geometry, "WKT reading error")
+    except WKTReadingError as err:
+        raise InvalidGeometryException(geometry, "WKT reading error") from err
 
-    if origin == 'LEFT_BOTTOM':
+    if origin == "LEFT_BOTTOM":
         geom = affine_transform(geom, [1, 0, 0, -1, 0, im_height - 0.5])
 
     if not geom.is_valid:
@@ -127,24 +139,25 @@ def parse_annotation(
 
     if not geom.is_valid:
         raise InvalidGeometryException(geometry, explain_validity(geom))
-    parsed = {'geometry': geom}
+    parsed = {"geometry": geom}
 
-    if geom.type == 'Point' and point_envelope_length is not None:
-        parsed['point_envelope_length'] = point_envelope_length
+    if geom.type == "Point" and point_envelope_length is not None:
+        parsed["point_envelope_length"] = point_envelope_length
 
-    if 'fill_color' not in ignore_fields:
-        default_color = default.get('fill_color')
-        parsed['fill_color'] = fill_color \
-            if fill_color is not None else default_color
+    if "fill_color" not in ignore_fields:
+        default_color = default.get("fill_color")
+        parsed["fill_color"] = fill_color if fill_color is not None else default_color
 
-    if 'stroke_color' not in ignore_fields:
-        default_color = default.get('stroke_color')
-        parsed['stroke_color'] = stroke_color \
-            if stroke_color is not None else default_color
+    if "stroke_color" not in ignore_fields:
+        default_color = default.get("stroke_color")
+        parsed["stroke_color"] = (
+            stroke_color if stroke_color is not None else default_color
+        )
 
-    if 'stroke_width' not in ignore_fields:
-        parsed['stroke_width'] = stroke_width \
-            if stroke_width is not None else default.get('stroke_width')
+    if "stroke_width" not in ignore_fields:
+        parsed["stroke_width"] = (
+            stroke_width if stroke_width is not None else default.get("stroke_width")
+        )
 
     return ParsedAnnotation(**parsed)
 

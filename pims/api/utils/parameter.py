@@ -11,7 +11,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from fastapi.params import Depends, Path as PathParam
+
+# pylint: disable=import-outside-toplevel
+
+from fastapi.params import Depends
+from fastapi.params import Path as PathParam
 from pathvalidate import sanitize_filename as _sanitize_filename
 
 from pims.config import Settings, get_settings
@@ -32,6 +36,7 @@ def filepath2path(filepath, config):
         Absolute resolved path
     """
     from pims.files.file import Path
+
     return Path(config.root, filepath)
 
 
@@ -57,37 +62,60 @@ def path2filepath(path, config=None):
 
 def filepath_parameter(
     filepath: str = PathParam(
-        ..., description="The file path, relative to server base path.",
-        example='123/my-file.ext'
+        ...,
+        description="The file path, relative to server base path.",
+        example="123/my-file.ext",
     ),
-    config: Settings = Depends(get_settings)
+    config: Settings = Depends(get_settings),
 ):
     path = filepath2path(filepath, config)
     if not path.exists():
         from pims.api.exceptions import FilepathNotFoundProblem
+
         raise FilepathNotFoundProblem(path)
     return path
 
 
 def imagepath_parameter(
     filepath: str = PathParam(
-        ..., description="The file path, relative to server base path.",
-        example='123/my-file.ext'
+        ...,
+        description="The file path, relative to server base path.",
+        example="123/my-file.ext",
     ),
-    config: Settings = Depends(get_settings)
+    config: Settings = Depends(get_settings),
 ):
     path = filepath2path(filepath, config)
     if not path.exists():
         from pims.api.exceptions import FilepathNotFoundProblem
+
         raise FilepathNotFoundProblem(path)
     if not path.is_single():
         from pims.api.exceptions import NoAppropriateRepresentationProblem
+
         raise NoAppropriateRepresentationProblem(path)
     return path
 
 
 def sanitize_filename(filename: str, replacement="-"):
     sanitized = _sanitize_filename(filename, replacement_text=replacement)
-    bad_chars = [" ", "(", ")", "+", "*", "/", "@", "'", '"',
-                 '$', '€', '£', '°', '`', '[', ']', '#', '?']
+    bad_chars = [
+        " ",
+        "(",
+        ")",
+        "+",
+        "*",
+        "/",
+        "@",
+        "'",
+        '"',
+        "$",
+        "€",
+        "£",
+        "°",
+        "`",
+        "[",
+        "]",
+        "#",
+        "?",
+    ]
     return "".join(c if c not in bad_chars else replacement for c in sanitized)

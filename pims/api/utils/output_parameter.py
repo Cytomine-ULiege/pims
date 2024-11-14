@@ -26,9 +26,13 @@ Size = Union[int, float]
 
 
 def get_thumb_output_dimensions(
-    in_image: Image, height: Optional[Size] = None, width: Optional[Size] = None,
-    length: Optional[Size] = None, zoom: Optional[int] = None, level: Optional[int] = None,
-    allow_upscaling: bool = True
+    in_image: Image,
+    height: Optional[Size] = None,
+    width: Optional[Size] = None,
+    length: Optional[Size] = None,
+    zoom: Optional[int] = None,
+    level: Optional[int] = None,
+    allow_upscaling: bool = True,
 ) -> Tuple[int, int]:
     """
     Get output dimensions according, by order of precedence, either height, either width,
@@ -77,29 +81,51 @@ def get_thumb_output_dimensions(
         tier = in_image.pyramid.get_tier_at_zoom(zoom)
         out_height, out_width = tier.height, tier.width
     elif height is not None:
-        out_height, out_width = get_rationed_resizing(height, in_image.height, in_image.width)
+        out_height, out_width = get_rationed_resizing(
+            height,
+            in_image.height,
+            in_image.width,
+        )
     elif width is not None:
-        out_width, out_height = get_rationed_resizing(width, in_image.width, in_image.height)
+        out_width, out_height = get_rationed_resizing(
+            width,
+            in_image.width,
+            in_image.height,
+        )
     elif length is not None:
         if in_image.width > in_image.height:
-            out_width, out_height = get_rationed_resizing(length, in_image.width, in_image.height)
+            out_width, out_height = get_rationed_resizing(
+                length,
+                in_image.width,
+                in_image.height,
+            )
         else:
-            out_height, out_width = get_rationed_resizing(length, in_image.height, in_image.width)
+            out_height, out_width = get_rationed_resizing(
+                length,
+                in_image.height,
+                in_image.width,
+            )
     else:
         raise BadRequestException(
-            detail='Impossible to determine output dimensions. '
-                   'Height, width and length cannot all be unset.'
+            detail="Impossible to determine output dimensions. "
+            "Height, width and length cannot all be unset."
         )
 
-    if not allow_upscaling and (out_width > in_image.width or out_height > in_image.height):
+    is_upscale = out_width > in_image.width or out_height > in_image.height
+    if not allow_upscaling and is_upscale:
         return in_image.width, in_image.height
 
     return out_width, out_height
 
 
 def get_window_output_dimensions(
-    in_image: Image, region: Region, height: Optional[Size] = None, width: Optional[Size] = None,
-    length: Optional[Size] = None, zoom: Optional[int] = None, level: Optional[int] = None
+    in_image: Image,
+    region: Region,
+    height: Optional[Size] = None,
+    width: Optional[Size] = None,
+    length: Optional[Size] = None,
+    zoom: Optional[int] = None,
+    level: Optional[int] = None,
 ) -> Tuple[int, int]:
     """
     Get output dimensions according, by order of precedence, either height, either width,
@@ -142,42 +168,53 @@ def get_window_output_dimensions(
     """
     if level is not None:
         tier = in_image.pyramid.get_tier_at_level(level)
-        out_height, out_width = round(region.true_height / tier.height_factor), round(
-            region.true_width / tier.width_factor
-            )
+        out_height = round(region.true_height / tier.height_factor)
+        out_width = round(region.true_width / tier.width_factor)
     elif zoom is not None:
         tier = in_image.pyramid.get_tier_at_zoom(zoom)
-        out_height, out_width = round(region.true_height / tier.height_factor), round(
-            region.true_width / tier.width_factor
-            )
+        out_height = round(region.true_height / tier.height_factor)
+        out_width = round(region.true_width / tier.width_factor)
     elif height is not None:
         out_height, out_width = get_rationed_resizing(
-            height, int(region.true_height), int(region.true_width)
+            height,
+            int(region.true_height),
+            int(region.true_width),
         )
     elif width is not None:
         out_width, out_height = get_rationed_resizing(
-            width, int(region.true_width), int(region.true_height)
+            width,
+            int(region.true_width),
+            int(region.true_height),
         )
     elif length is not None:
         if region.true_width > region.true_height:
             out_width, out_height = get_rationed_resizing(
-                length, int(region.true_width), int(region.true_height)
+                length,
+                int(region.true_width),
+                int(region.true_height),
             )
         else:
             out_height, out_width = get_rationed_resizing(
-                length, int(region.true_height), int(region.true_width)
+                length,
+                int(region.true_height),
+                int(region.true_width),
             )
     else:
         raise BadRequestException(
-            detail='Impossible to determine output dimensions. '
-                   'Height, width and length cannot all be unset.'
+            detail=(
+                "Impossible to determine output dimensions. "
+                "Height, width and length cannot all be unset."
+            )
         )
 
     return out_width, out_height
 
 
 def safeguard_output_dimensions(
-    safe_mode: SafeMode, max_size: int, width: int, height: int
+    safe_mode: SafeMode,
+    max_size: int,
+    width: int,
+    height: int,
 ) -> Tuple[int, int]:
     """
     Safeguard image output dimensions according to safe mode and maximum
@@ -208,20 +245,22 @@ def safeguard_output_dimensions(
     """
     if safe_mode == SafeMode.UNSAFE:
         return width, height
-    elif safe_mode == SafeMode.SAFE_REJECT and (width > max_size or height > max_size):
+
+    if safe_mode == SafeMode.SAFE_REJECT and (width > max_size or height > max_size):
         raise TooLargeOutputProblem(width, height, max_size)
-    elif safe_mode == SafeMode.SAFE_RESIZE and (width > max_size or height > max_size):
+
+    if safe_mode == SafeMode.SAFE_RESIZE and (width > max_size or height > max_size):
         if width > height:
             return get_rationed_resizing(max_size, width, height)
-        else:
-            height, width = get_rationed_resizing(max_size, height, width)
-            return width, height
-    else:
+
+        height, width = get_rationed_resizing(max_size, height, width)
         return width, height
+
+    return width, height
 
 
 def check_level_validity(pyramid: Pyramid, level: Optional[int]):
-    """ Check the level tier exists in the image pyramid.
+    """Check the level tier exists in the image pyramid.
 
     Parameters
     ----------
@@ -260,7 +299,12 @@ def check_zoom_validity(pyramid: Pyramid, zoom: Optional[int]):
         raise BadRequestException(detail=f"Zoom tier {zoom} does not exist.")
 
 
-def check_tileindex_validity(pyramid: Pyramid, ti: int, tier_idx: int, tier_type: TierIndexType):
+def check_tileindex_validity(
+    pyramid: Pyramid,
+    ti: int,
+    tier_idx: int,
+    tier_type: TierIndexType,
+):
     """
     Check the tile index exists in the image pyramid at given tier.
 
@@ -292,7 +336,11 @@ def check_tileindex_validity(pyramid: Pyramid, ti: int, tier_idx: int, tier_type
 
 
 def check_tilecoord_validity(
-    pyramid: Pyramid, tx: int, ty: int, tier_idx: int, tier_type: TierIndexType
+    pyramid: Pyramid,
+    tx: int,
+    ty: int,
+    tier_idx: int,
+    tier_type: TierIndexType,
 ):
     """
     Check the tile index exists in the image pyramid at given tier.
