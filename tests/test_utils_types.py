@@ -35,10 +35,10 @@ def test_boolean_parser():
 
 def test_json_parser():
     assert parse_json("{}") == {}
-    assert parse_json("{ 'age':100}") == {"age": 100}
-    assert parse_json("{'age':100 }") == {"age": 100}
-    assert parse_json("{'age':100 }") == {"age": 100}
-    assert parse_json("{'foo':[5,6.8],'foo':'bar'}") == {"foo": "bar"}
+    assert parse_json('{ "age":100}') == {"age": 100}
+    assert parse_json("{\"age\":100 }") == {"age": 100}
+    assert parse_json('{"age":100 }') == {"age": 100}
+    assert parse_json('{"foo":[5,6.8],"foo":"bar"}') == {"foo": "bar"}
 
     assert parse_json("{asdf}", False) is None
     with pytest.raises(ValueError):
