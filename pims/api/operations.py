@@ -11,30 +11,39 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=line-too-long,invalid-name,broad-exception-caught,unused-argument,protected-access
+
 import logging
 import os
 import traceback
 from typing import Optional
-import aiofiles
 
+import aiofiles
 from cytomine import Cytomine
-from cytomine.models import (
-    Project, ProjectCollection, Storage, UploadedFile
-)
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile
+from cytomine.models import Project, ProjectCollection, Storage, UploadedFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from starlette.formparsers import MultiPartMessage, MultiPartParser, _user_safe_decode
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
-from starlette.formparsers import MultiPartMessage, MultiPartParser, _user_safe_decode
 
 from pims.api.exceptions import (
-    AuthenticationException, BadRequestException, CytomineProblem,
-    check_representation_existence
+    AuthenticationException,
+    BadRequestException,
+    CytomineProblem,
+    check_representation_existence,
 )
 from pims.api.utils.cytomine_auth import (
-    get_this_image_server, parse_authorization_header,
-    parse_request_token, sign_token
+    get_this_image_server,
+    parse_authorization_header,
+    parse_request_token,
+    sign_token,
 )
-from pims.api.utils.parameter import filepath_parameter, imagepath_parameter, sanitize_filename
+from pims.api.utils.parameter import (
+    filepath_parameter,
+    imagepath_parameter,
+    sanitize_filename,
+)
 from pims.api.utils.response import serialize_cytomine_model
 from pims.config import Settings, get_settings
 from pims.files.archive import make_zip_archive
@@ -58,81 +67,102 @@ cytomine_logger = logging.getLogger("pims.cytomine")
 
 WRITING_PATH = get_settings().writing_path
 
-@router.post('/upload', tags=['Import'])
+
+@router.post("/upload", tags=["Import"])
 async def import_direct_chunks(
     request: Request,
     background: BackgroundTasks,
     core: Optional[str] = None,
     cytomine: Optional[str] = None,
     storage: Optional[int] = None,
-    id_storage: Optional[int] = Query(None, alias='idStorage'),
+    id_storage: Optional[int] = Query(None, alias="idStorage"),
     projects: Optional[str] = None,
-    id_project: Optional[str] = Query(None, alias='idProject'),
+    id_project: Optional[str] = Query(None, alias="idProject"),
     sync: Optional[bool] = False,
     keys: Optional[str] = None,
     values: Optional[str] = None,
-    config: Settings = Depends(get_settings)
+    config: Settings = Depends(get_settings),
 ):
-    ''' Upload file using the request inspired by UploadFile class from FastAPI along with improved efficiency '''
+    """Upload file using the request inspired by UploadFile class from FastAPI along with improved efficiency"""
 
     multipart_parser = MultiPartParser(request.headers, request.stream())
     filename = str(unique_name_generator())
-    pending_path = Path(WRITING_PATH,filename)
+    pending_path = Path(WRITING_PATH, filename)
 
     if not os.path.exists(pending_path.parent):
         os.makedirs(WRITING_PATH)
 
     upload_name = await write_file(multipart_parser, pending_path)
-    upload_size = request.headers['content-length']
+    upload_size = request.headers["content-length"]
 
-    cytomine, cytomine_auth, root = connexion_to_core(request, core, cytomine, str(pending_path), upload_size, upload_name,  id_project, id_storage,
-                                                projects, storage, config, keys, values)
+    cytomine, cytomine_auth, root = connexion_to_core(
+        request,
+        core,
+        cytomine,
+        str(pending_path),
+        upload_size,
+        upload_name,
+        id_project,
+        id_storage,
+        projects,
+        storage,
+        config,
+        keys,
+        values,
+    )
 
     if sync:
         try:
             run_import(
-                pending_path, upload_name,
-                extra_listeners=[cytomine], prefer_copy=False
+                pending_path, upload_name, extra_listeners=[cytomine], prefer_copy=False
             )
             root = cytomine.initial_uf.fetch()
             images = cytomine.images
-            return [{
-                "status": 200,
-                "name": upload_name,
-                "size" : upload_size,
-                "uploadedFile": serialize_cytomine_model(root),
-                "images": [{
-                    "image": serialize_cytomine_model(image[0]),
-                    "imageInstances": serialize_cytomine_model(image[1])
-                } for image in images]
-            }]
+            return [
+                {
+                    "status": 200,
+                    "name": upload_name,
+                    "size": upload_size,
+                    "uploadedFile": serialize_cytomine_model(root),
+                    "images": [
+                        {
+                            "image": serialize_cytomine_model(image[0]),
+                            "imageInstances": serialize_cytomine_model(image[1]),
+                        }
+                        for image in images
+                    ],
+                }
+            ]
         except Exception as e:
             traceback.print_exc()
             return JSONResponse(
-                content=[{
-                    "status": 500,
-                    "error": str(e),
-                    "files": [{
-                        "size": 0,
-                        "error": str(e)
-                    }]
-                }], status_code=400
+                content=[
+                    {
+                        "status": 500,
+                        "error": str(e),
+                        "files": [{"size": 0, "error": str(e)}],
+                    }
+                ],
+                status_code=400,
             )
     else:
         send_task(
             Task.IMPORT_WITH_CYTOMINE,
             args=[cytomine_auth, pending_path, upload_name, cytomine, False],
-            starlette_background=background
+            starlette_background=background,
         )
 
         return JSONResponse(
-            content=[{
-                "status": 200,
-                "name": upload_name,
-                "size" : upload_size,
-                "uploadedFile": serialize_cytomine_model(root),
-                "images": []
-            }], status_code=200
+            content=[
+                {
+                    "status": 200,
+                    "name": upload_name,
+                    "size": upload_size,
+                    "uploadedFile": serialize_cytomine_model(root),
+                    "images": [],
+                }
+            ],
+            status_code=200,
         )
 
 
@@ -140,15 +170,17 @@ def import_(filepath, body):
     pass
 
 
-@router.get('/file/{filepath:path}/export', tags=['Export'])
-def export_file(
-    background: BackgroundTasks,
-    path: Path = Depends(filepath_parameter)
-):
+@router.get("/file/{filepath:path}/export", tags=["Export"])
+def export_file(background: BackgroundTasks, path: Path = Depends(filepath_parameter)):
     """
     Export a file. All files with an identified PIMS role in the server base path can be exported.
     """
-    if not (path.has_upload_role() or path.has_original_role() or path.has_spatial_role() or path.has_spectral_role()):
+    if not (
+        path.has_upload_role()
+        or path.has_original_role()
+        or path.has_spatial_role()
+        or path.has_spectral_role()
+    ):
         raise BadRequestException()
 
     if path.is_dir():
@@ -164,13 +196,11 @@ def export_file(
         exported = path
 
     return FileResponse(
-        exported,
-        media_type="application/octet-stream",
-        filename=path.name
+        exported, media_type="application/octet-stream", filename=path.name
     )
 
 
-@router.get('/image/{filepath:path}/export', tags=['Export'])
+@router.get("/image/{filepath:path}/export", tags=["Export"])
 def export_upload(
     background: BackgroundTasks,
     path: Path = Depends(imagepath_parameter),
@@ -195,32 +225,29 @@ def export_upload(
         upload_file = tmp_export
         media_type = "application/zip"
 
-    return FileResponse(
-        upload_file,
-        media_type=media_type,
-        filename=upload_file.name
-    )
+    return FileResponse(upload_file, media_type=media_type, filename=upload_file.name)
 
 
 def delete(filepath):
     pass
 
+
 async def write_file(fastapi_parser: MultiPartParser, pending_path):
-    '''
+    """
     This function is inspired by parse(self) function from formparsers.py in fastapi>=0.65.1,<=0.68.2' used to upload a file:
 
-    We know that, besides the first chunks where it is useful to retrieve the headers "Content-Disposition" and the "Content-Type" 
+    We know that, besides the first chunks where it is useful to retrieve the headers "Content-Disposition" and the "Content-Type"
     (and not write them in the file) , all the other chunks will be bytes of the image to upload an can be written right away in a file on disk.
     Therefore, we can get inspired by the parse() function of FastAPI and, by assuming that there is only one file per request
-    (we do not handle multiple file upload) and no other key-value pairs, we can parse the first chunks until the headers are finished to retrieve 
+    (we do not handle multiple file upload) and no other key-value pairs, we can parse the first chunks until the headers are finished to retrieve
     the headers "Content-Disposition" and the "Content-Type" (to get the filename) by calling process_chunks_headers(). Once the headers are process,
     we can directly write the bytes into a file.
-    
-    '''
+
+    """
 
     _, params = parse_options_header(fastapi_parser.headers["Content-Type"])
     charset = params.get(b"charset", "utf-8")
-    if type(charset) == bytes:
+    if isinstance(charset, bytes):
         charset = charset.decode("latin-1")
     fastapi_parser._charset = charset
     original_filename = "no-name"
@@ -228,30 +255,49 @@ async def write_file(fastapi_parser: MultiPartParser, pending_path):
     boundary = params[b"boundary"]
     headers_finised = False
     callbacks = {
-            "on_part_data": fastapi_parser.on_part_data,
-            "on_header_field": fastapi_parser.on_header_field,
-            "on_header_value": fastapi_parser.on_header_value,
-            "on_header_end": fastapi_parser.on_header_end,
-            "on_headers_finished": fastapi_parser.on_headers_finished,
-        }
-    parser = multipart.MultipartParser(boundary,callbacks)
-    async with aiofiles.open(pending_path, 'wb') as f:
+        "on_part_data": fastapi_parser.on_part_data,
+        "on_header_field": fastapi_parser.on_header_field,
+        "on_header_value": fastapi_parser.on_header_value,
+        "on_header_end": fastapi_parser.on_header_end,
+        "on_headers_finished": fastapi_parser.on_headers_finished,
+    }
+    parser = multipart.MultipartParser(boundary, callbacks)
+    async with aiofiles.open(pending_path, "wb") as f:
         async for chunk in fastapi_parser.stream:
             # we assume that there is only one key-value in the body request (that is only one file to upload and no other parameter in the request such taht there is only one headers block)
-            if not headers_finised:#going through the one-only headers block of the body request and retrieve the filename 
-                original_filename, headers_finised = await process_chunks_headers(parser, fastapi_parser, chunk, f, original_filename=original_filename)
-            else: #enables more efficient upload by by-passing the mutlipart parser logic and just writing the data bytes directly
-                await f.write(chunk) 
+            if (
+                not headers_finised
+            ):  # going through the one-only headers block of the body request and retrieve the filename
+                original_filename, headers_finised = await process_chunks_headers(
+                    parser,
+                    fastapi_parser,
+                    chunk,
+                    f,
+                    original_filename=original_filename,
+                )
+            else:  # enables more efficient upload by by-passing the mutlipart parser logic and just writing the data bytes directly
+                await f.write(chunk)
 
     return original_filename
 
-async def process_chunks_headers(parser, fastapi_parser, chunk, file, header_field: bytes =b"", header_value: bytes =b"", original_filename='no-name'):
-    ''' 
-    This function is inspired by parse(self) function from formparsers.py in fastapi>=0.65.1,<=0.68.2' used to upload a file:
-    
-    '''
 
-    parser.write(chunk) # when this line is run at each chunk, it is time-consuming for big files 
+async def process_chunks_headers(
+    parser,
+    fastapi_parser,
+    chunk,
+    file,
+    header_field: bytes = b"",
+    header_value: bytes = b"",
+    original_filename="no-name",
+):
+    """
+    This function is inspired by parse(self) function from formparsers.py in fastapi>=0.65.1,<=0.68.2' used to upload a file:
+
+    """
+
+    parser.write(
+        chunk
+    )  # when this line is run at each chunk, it is time-consuming for big files
     messages = list(fastapi_parser.messages)
     fastapi_parser.messages.clear()
     for message_type, message_bytes in messages:
@@ -267,14 +313,30 @@ async def process_chunks_headers(parser, fastapi_parser, chunk, file, header_fie
             headers_finished = True
             _, options = parse_options_header(content_disposition)
             if b"filename" in options:
-                original_filename = _user_safe_decode(options[b"filename"], fastapi_parser._charset)
+                original_filename = _user_safe_decode(
+                    options[b"filename"], fastapi_parser._charset
+                )
         elif message_type == MultiPartMessage.PART_DATA:
-                await file.write(message_bytes)
+            await file.write(message_bytes)
     return original_filename, headers_finished
 
-def connexion_to_core(request: Request, core: str, cytomine: str, upload_path: str, upload_size: str, upload_name: str,  id_project: str, id_storage: str, projects: str, storage: str, 
-                      config: Settings,  keys: str, values: str):
-    
+
+def connexion_to_core(
+    request: Request,
+    core: str,
+    cytomine: str,
+    upload_path: str,
+    upload_size: str,
+    upload_name: str,
+    id_project: str,
+    id_storage: str,
+    projects: str,
+    storage: str,
+    config: Settings,
+    keys: str,
+    values: str,
+):
+
     core = cytomine if cytomine is not None else core
     if not core:
         raise BadRequestException(detail="core or cytomine parameter missing.")
@@ -289,8 +351,10 @@ def connexion_to_core(request: Request, core: str, cytomine: str, upload_path: s
         if projects_to_parse:
             projects = ensure_list(projects_to_parse.split(","))
             id_projects = [int(p) for p in projects]
-    except ValueError:
-        raise BadRequestException(detail="Invalid projects or idProject parameter.")
+    except ValueError as err:
+        raise BadRequestException(
+            detail="Invalid projects or idProject parameter."
+        ) from err
 
     public_key, signature = parse_authorization_header(request.headers)
     cytomine_auth = (core, config.cytomine_public_key, config.cytomine_private_key)
@@ -318,21 +382,27 @@ def connexion_to_core(request: Request, core: str, cytomine: str, upload_path: s
                 raise CytomineProblem(f"Project {pid} not found")
             projects.append(project)
 
-        keys = keys.split(',') if keys is not None else []
-        values = values.split(',') if values is not None else []
+        keys = keys.split(",") if keys is not None else []
+        values = values.split(",") if values is not None else []
         if len(keys) != len(values):
             raise CytomineProblem(f"Keys {keys} and values {values} have varying size.")
         user_properties = zip(keys, values)
 
         upload_name = sanitize_filename(upload_name)
         root = UploadedFile(
-            upload_name, upload_path, upload_size, "", "",
-            id_projects, id_storage, user.id, this.id, UploadedFile.UPLOADED
+            upload_name,
+            upload_path,
+            upload_size,
+            "",
+            "",
+            id_projects,
+            id_storage,
+            user.id,
+            this.id,
+            UploadedFile.UPLOADED,
         )
 
         cytomine = CytomineListener(
-            cytomine_auth, root, projects=projects,
-            user_properties=user_properties
+            cytomine_auth, root, projects=projects, user_properties=user_properties
         )
     return cytomine, cytomine_auth, root
-

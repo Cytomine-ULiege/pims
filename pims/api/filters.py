@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import List, Optional
 
 from fastapi import APIRouter
@@ -22,7 +23,7 @@ from pims.api.utils.response import FastJsonResponse, response_list
 from pims.filters import FILTERS
 
 router = APIRouter()
-api_tags = ['Filters']
+api_tags = ["Filters"]
 
 
 class Filter(BaseModel):
@@ -30,21 +31,19 @@ class Filter(BaseModel):
     An image filter is used to change the appearance of an image and helps at understanding the
     source image.
     """
+
     id: FilterId
-    aliases: List[FilterId] = Field(
-        [], description='List of filter id aliases'
-    )
-    name: str = Field(
-        ..., description='A human readable name for the image filter.'
-    )
+    aliases: List[FilterId] = Field([], description="List of filter id aliases")
+    name: str = Field(..., description="A human readable name for the image filter.")
     type: FilterType = Field(...)
     description: Optional[str] = Field(
-        None, description='Filter description, explaining how it works, in Markdown.'
+        None,
+        description="Filter description, explaining how it works, in Markdown.",
     )
 
 
 class FiltersList(CollectionSize):
-    items: List[Filter] = Field(None, description='Array of filters', title='Filter')
+    items: List[Filter] = Field(None, description="Array of filters", title="Filter")
 
 
 def _serialize_filter(imgfilter):
@@ -53,13 +52,15 @@ def _serialize_filter(imgfilter):
         name=imgfilter.get_name(),
         type=imgfilter.get_type(),
         description=imgfilter.get_description(),
-        aliases=imgfilter.get_aliases()
+        aliases=imgfilter.get_aliases(),
     )
 
 
 @router.get(
-    '/filters', response_model=FiltersList, tags=api_tags,
-    response_class=FastJsonResponse
+    "/filters",
+    response_model=FiltersList,
+    tags=api_tags,
+    response_class=FastJsonResponse,
 )
 def list_filters():
     """
@@ -70,8 +71,10 @@ def list_filters():
 
 
 @router.get(
-    '/filters/{filter_id}', response_model=Filter, tags=api_tags,
-    response_class=FastJsonResponse
+    "/filters/{filter_id}",
+    response_model=Filter,
+    tags=api_tags,
+    response_class=FastJsonResponse,
 )
 def show_filter(filter_id: str):
     """

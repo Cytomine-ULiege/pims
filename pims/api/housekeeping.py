@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -22,38 +23,38 @@ from pims.api.utils.response import FastJsonResponse
 from pims.config import Settings, get_settings
 
 router = APIRouter()
-api_tags = ['Housekeeping']
+api_tags = ["Housekeeping"]
 
 
 class DiskUsage(BaseModel):
     mount_point: Optional[str] = Field(
         None,
-        description='The mounting point of the file system having the directory.'
+        description="The mounting point of the file system having the directory.",
     )
     mount_available_size: conint(ge=0) = Field(
         ...,
-        description='Available space on the mounted file system having the directory, in bytes.',
+        description="Available space on the mounted file system having the directory, in bytes.",
     )
     mount_total_size: conint(ge=0) = Field(
         ...,
-        description='Total space on the mounted file system having the directory, in bytes.',
+        description="Total space on the mounted file system having the directory, in bytes.",
     )
     mount_used_size: conint(ge=0) = Field(
         ...,
-        description='Used space on the mounted file system having the directory, in bytes',
+        description="Used space on the mounted file system having the directory, in bytes",
     )
     mount_used_size_percentage: confloat(ge=0.0, le=100.0) = Field(
         ...,
-        description='Percentage of used space regarding total space of the mounted file system',
+        description="Percentage of used space regarding total space of the mounted file system",
     )
     used_size: conint(ge=0) = Field(
         ...,
-        description='Used space by the directory, in bytes.'
+        description="Used space by the directory, in bytes.",
     )
     used_size_percentage: confloat(ge=0.0, le=100.0) = Field(
         ...,
-        description='Percentage of directory used space regarding total space of the mounted '
-                    'file system',
+        description="Percentage of directory used space regarding total space of the mounted "
+        "file system",
     )
 
 
@@ -69,18 +70,20 @@ def _serialize_usage(path):
             "mount_used_size": usage.used,
             "mount_used_size_percentage": float(usage.used) / float(usage.total) * 100,
             "used_size": size,
-            "used_size_percentage": float(size) / float(usage.total) * 100
+            "used_size_percentage": float(size) / float(usage.total) * 100,
         }
     )
 
 
 @router.get(
-    '/directory/{directorypath:path}/disk-usage', response_model=DiskUsage,
-    tags=api_tags, response_class=FastJsonResponse
+    "/directory/{directorypath:path}/disk-usage",
+    response_model=DiskUsage,
+    tags=api_tags,
+    response_class=FastJsonResponse,
 )
 def show_path_usage(
     directorypath: str,
-    config: Settings = Depends(get_settings)
+    config: Settings = Depends(get_settings),
 ) -> DiskUsage:
     """
     Directory disk usage
@@ -94,8 +97,10 @@ def show_path_usage(
 
 
 @router.get(
-    '/disk-usage', response_model=DiskUsage, tags=api_tags,
-    response_class=FastJsonResponse
+    "/disk-usage",
+    response_model=DiskUsage,
+    tags=api_tags,
+    response_class=FastJsonResponse,
 )
 def show_disk_usage(config: Settings = Depends(get_settings)) -> DiskUsage:
     """
@@ -114,8 +119,10 @@ class DiskUsageLegacy(BaseModel):
 
 
 @router.get(
-    '/storage/size.json', response_model=DiskUsageLegacy, tags=api_tags,
-    response_class=FastJsonResponse
+    "/storage/size.json",
+    response_model=DiskUsageLegacy,
+    tags=api_tags,
+    response_class=FastJsonResponse,
 )
 def show_disk_usage_v1(config: Settings = Depends(get_settings)):
     """
@@ -128,5 +135,5 @@ def show_disk_usage_v1(config: Settings = Depends(get_settings)):
         "usedP": data.mount_used_size_percentage / 100,
         "hostname": None,
         "ip": None,
-        "mount": data.mount_point
+        "mount": data.mount_point,
     }

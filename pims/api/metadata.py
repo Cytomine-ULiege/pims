@@ -11,6 +11,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=line-too-long,no-name-in-module,invalid-name,protected-access,unused-argument
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, List, Optional, Union
@@ -20,18 +23,32 @@ from pydantic import BaseModel, Field, conint
 from starlette.requests import Request
 from starlette.responses import Response
 
-from pims.api.exceptions import NoAppropriateRepresentationProblem, check_representation_existence
+from pims.api.exceptions import (
+    NoAppropriateRepresentationProblem,
+    check_representation_existence,
+)
 from pims.api.utils.header import ImageRequestHeaders, add_image_size_limit_header
-from pims.api.utils.mimetype import OutputExtension, VISUALISATION_MIMETYPES, get_output_format
+from pims.api.utils.mimetype import (
+    VISUALISATION_MIMETYPES,
+    OutputExtension,
+    get_output_format,
+)
 from pims.api.utils.models import (
-    AssociatedName, CollectionSize, FormatId,
-    ImageOutDisplayQueryParams, ZoomOrLevel
+    AssociatedName,
+    CollectionSize,
+    FormatId,
+    ImageOutDisplayQueryParams,
+    ZoomOrLevel,
 )
 from pims.api.utils.output_parameter import (
     get_thumb_output_dimensions,
-    safeguard_output_dimensions
+    safeguard_output_dimensions,
 )
-from pims.api.utils.parameter import filepath_parameter, imagepath_parameter, path2filepath
+from pims.api.utils.parameter import (
+    filepath_parameter,
+    imagepath_parameter,
+    path2filepath,
+)
 from pims.api.utils.response import FastJsonResponse, convert_quantity, response_list
 from pims.cache import cache_image_response
 from pims.config import Settings, get_settings
@@ -41,7 +58,7 @@ from pims.processing.image_response import AssociatedResponse
 from pims.utils.dtypes import dtype_to_bits
 
 router = APIRouter()
-api_tags = ['Metadata']
+api_tags = ["Metadata"]
 cache_associated_ttl = get_settings().cache_ttl_thumb
 
 
@@ -53,28 +70,38 @@ class SingleFileInfo(BaseModel):
     file_type: FileType
     filepath: str = Field(
         ...,
-        description='The file path (filename with path, relative to the server root)',
-        example='/a/b/c/thefile.png',
+        description="The file path (filename with path, relative to the server root)",
+        example="/a/b/c/thefile.png",
     )
     stem: str = Field(
         ...,
-        description='The file stem (filename without extension)',
-        example='thefile',
+        description="The file stem (filename without extension)",
+        example="thefile",
     )
     extension: str = Field(
-        ..., description='The file extension', example='.png'
+        ...,
+        description="The file extension",
+        example=".png",
     )
-    created_at: datetime = Field(..., description='The file creation date')
-    size: int = Field(..., description='The file size, in bytes.')
+    created_at: datetime = Field(
+        ...,
+        description="The file creation date",
+    )
+    size: int = Field(
+        ...,
+        description="The file size, in bytes.",
+    )
     is_symbolic: bool = Field(
-        False, description='Whether the file is a symbolic link or not'
+        False,
+        description="Whether the file is a symbolic link or not",
     )
     role: FileRole
 
 
 class CollectionFileInfo(SingleFileInfo):
-    children: List[Union['CollectionFileInfo', SingleFileInfo]] = Field(
-        ..., description='Information about children files'
+    children: List[Union["CollectionFileInfo", SingleFileInfo]] = Field(
+        ...,
+        description="Information about children files",
     )
 
 
@@ -94,7 +121,7 @@ class FileInfo(BaseModel):
             "created_at": path.creation_datetime,
             "size": path.size,
             "is_symbolic": path.is_symlink(),
-            "role": FileRole.from_path(path)
+            "role": FileRole.from_path(path),
         }
         if path.is_collection():
             children = []
@@ -102,8 +129,8 @@ class FileInfo(BaseModel):
                 if p.is_symlink():
                     children.append(FileInfo.from_path(p.resolve()))
             return CollectionFileInfo(children=children, **info)
-        else:
-            return SingleFileInfo(**info)
+
+        return SingleFileInfo(**info)
 
 
 class PixelType(str, Enum):
@@ -111,12 +138,12 @@ class PixelType(str, Enum):
     The type used to store each pixel in the image.
     """
 
-    int8 = 'int8'
-    int16 = 'int16'
-    int32 = 'int32'
-    uint8 = 'uint8'
-    uint16 = 'uint16'
-    uint32 = 'uint32'
+    int8 = "int8"
+    int16 = "int16"
+    int32 = "int32"
+    uint8 = "uint8"
+    uint16 = "uint16"
+    uint32 = "uint32"
 
 
 class ImageInfo(BaseModel):
@@ -126,89 +153,107 @@ class ImageInfo(BaseModel):
     """
 
     original_format: FormatId = Field(
-        ..., description='The original image format identifier.'
+        ...,
+        description="The original image format identifier.",
     )
     width: conint(ge=1) = Field(
         ...,
-        description='The (multidimensional) image width. It is the number of pixels along X axis.',
+        description="The (multidimensional) image width. It is the number of pixels along X axis.",
     )
     height: conint(ge=1) = Field(
         ...,
-        description='The (multidimensional) image height. It is the number of pixels along Y axis.',
+        description="The (multidimensional) image height. It is the number of pixels along Y axis.",
     )
     depth: conint(ge=1) = Field(
         ...,
-        description='The multidimensional image depth. It is the number of focal planes.',
+        description="The multidimensional image depth. It is the number of focal planes.",
     )
     duration: conint(ge=1) = Field(
         ...,
-        description='The multidimensional image duration. It is the number of frames.',
+        description="The multidimensional image duration. It is the number of frames.",
     )
     physical_size_x: Optional[float] = Field(
         None,
-        description='The physical size of a pixel along the X axis, expressed in micrometers (µm).'
+        description="The physical size of a pixel along the X axis, expressed in micrometers (µm).",
     )
     physical_size_y: Optional[float] = Field(
         None,
-        description='The physical size of a pixel along the Y axis, expressed in micrometers (µm).'
+        description="The physical size of a pixel along the Y axis, expressed in micrometers (µm).",
     )
     physical_size_z: Optional[float] = Field(
         None,
-        description='The physical size of a pixel (voxel) along the Z axis, expressed in '
-                    'micrometers (µm).',
+        description="The physical size of a pixel (voxel) along the Z axis, expressed in "
+        "micrometers (µm).",
     )
     frame_rate: Optional[float] = Field(
         None,
-        description='The frequency at which consecutive timepoints are taken (T axis), expressed '
-                    'in Hz.',
+        description="The frequency at which consecutive timepoints are taken (T axis), expressed "
+        "in Hz.",
     )
     n_channels: conint(ge=1) = Field(
         ...,
-        description='The number of channels in the image.'
-                    'Grayscale images have 1 channel. RGB images have 3 channels.'
-                    'It is the product of `n_samples` and `n_concrete_channels`.',
+        description=(
+            "The number of channels in the image."
+            "Grayscale images have 1 channel. RGB images have 3 channels."
+            "It is the product of `n_samples` and `n_concrete_channels`."
+        ),
     )
     n_concrete_channels: int = Field(
         ...,
-        description='The number of concrete channel planes in the image.'
-                    'A RGB image has 3 channels, but they are usually interleaved in a single '
-                    'plane. In such a case, there is only 1 concrete channel with 3 samples.',
+        description=(
+            "The number of concrete channel planes in the image."
+            "A RGB image has 3 channels, but they are usually interleaved in a single "
+            "plane. In such a case, there is only 1 concrete channel with 3 samples."
+        ),
     )
     n_samples: int = Field(
         ...,
-        description='The number of samples per concrete channel. There is usually 1 sample per '
-                    'concrete channel, except when a RGB image have interleaved RGB values.'
+        description=(
+            "The number of samples per concrete channel. There is usually 1 sample per "
+            "concrete channel, except when a RGB image have interleaved RGB values."
+        ),
     )
     n_planes: int = Field(
         ...,
-        description='The number of intrinsic planes in the image.'
-                    'It is computed as `n_concrete_channels * depth * duration`.',
+        description=(
+            "The number of intrinsic planes in the image."
+            "It is computed as `n_concrete_channels * depth * duration`."
+        ),
     )
     are_rgb_planes: bool = Field(
         ...,
-        description='Whether concrete channels (and thus planes) are RGB, meaning that channels '
-                    'have a meaning merged `n_samples` by `n_samples`.'
+        description=(
+            "Whether concrete channels (and thus planes) are RGB, meaning that channels "
+            "have a meaning merged `n_samples` by `n_samples`."
+        ),
     )
     n_distinct_channels: int = Field(
         ...,
-        description='The number of suggested distinct channels for visualisation.'
-                    'RGB or fluorescence images have 1 single distinct channels (all channels '
-                    'are merged). Hyperspectral images can have several distinct channels.'
+        description=(
+            "The number of suggested distinct channels for visualisation."
+            "RGB or fluorescence images have 1 single distinct channels (all channels "
+            "are merged). Hyperspectral images can have several distinct channels."
+        ),
     )
     acquired_at: Optional[datetime] = Field(
-        None, description='The acquisition date of the image.'
+        None,
+        description="The acquisition date of the image.",
     )
-    description: Optional[str] = Field(None, description='The image description.')
+    description: Optional[str] = Field(
+        None,
+        description="The image description.",
+    )
     pixel_type: PixelType = Field(
-        ..., description='The type used to store each pixel in the image.'
+        ...,
+        description="The type used to store each pixel in the image.",
     )
     significant_bits: conint(ge=1) = Field(
         ...,
-        description='The number of bits within the type storing each pixel that are significant.',
+        description="The number of bits within the type storing each pixel that are significant.",
     )
     bits: conint(ge=1) = Field(
         ...,
-        description='The number of bits used by the type storing each pixel.'
+        description="The number of bits used by the type storing each pixel.",
     )
 
     @classmethod
@@ -226,42 +271,51 @@ class ImageInfo(BaseModel):
                 "n_planes": image.n_planes,
                 "are_rgb_planes": bool(image.n_samples > 1),
                 "n_distinct_channels": image.n_distinct_channels,
-                "physical_size_x": convert_quantity(image.physical_size_x, "micrometers"),
-                "physical_size_y": convert_quantity(image.physical_size_y, "micrometers"),
-                "physical_size_z": convert_quantity(image.physical_size_z, "micrometers"),
+                "physical_size_x": convert_quantity(
+                    image.physical_size_x,
+                    "micrometers",
+                ),
+                "physical_size_y": convert_quantity(
+                    image.physical_size_y,
+                    "micrometers",
+                ),
+                "physical_size_z": convert_quantity(
+                    image.physical_size_z,
+                    "micrometers",
+                ),
                 "frame_rate": convert_quantity(image.frame_rate, "Hz"),
                 "acquired_at": image.acquisition_datetime,
                 "description": image.description,
                 "pixel_type": PixelType[str(image.pixel_type)],
                 "significant_bits": image.significant_bits,
-                "bits": dtype_to_bits(image.pixel_type)
+                "bits": dtype_to_bits(image.pixel_type),
             }
         )
 
 
 class TierInfo(BaseModel):
-    zoom: ZoomOrLevel = Field(..., description='The zoom at this tier')
-    level: ZoomOrLevel = Field(..., description='The level at this tier')
-    width: conint(ge=1) = Field(..., description='The tier width')
-    height: conint(ge=1) = Field(..., description='The tier height')
+    zoom: ZoomOrLevel = Field(..., description="The zoom at this tier")
+    level: ZoomOrLevel = Field(..., description="The level at this tier")
+    width: conint(ge=1) = Field(..., description="The tier width")
+    height: conint(ge=1) = Field(..., description="The tier height")
     tile_width: conint(ge=1) = Field(
-        ..., description='The width of a tile', example=256
+        ...,
+        description="The width of a tile",
+        example=256,
     )
     tile_height: conint(ge=1) = Field(
-        ..., description='The height of a tile', example=256
+        ...,
+        description="The height of a tile",
+        example=256,
     )
     downsampling_factor: float = Field(
         ...,
-        description='The factor by which the tier downsamples the basis of the pyramid.',
+        description="The factor by which the tier downsamples the basis of the pyramid.",
         example=2.0,
     )
-    n_tiles: int = Field(..., description='The number of tiles at this tier')
-    n_tx: int = Field(
-        ..., description='The number of tiles along horizontal axis'
-    )
-    n_ty: int = Field(
-        ..., description='The number of tiles along vertical axis'
-    )
+    n_tiles: int = Field(..., description="The number of tiles at this tier")
+    n_tx: int = Field(..., description="The number of tiles along horizontal axis")
+    n_ty: int = Field(..., description="The number of tiles along vertical axis")
 
     @classmethod
     def from_tier(cls, tier):
@@ -276,7 +330,7 @@ class TierInfo(BaseModel):
                 "downsampling_factor": tier.average_factor,
                 "n_tiles": tier.max_ti,
                 "n_tx": tier.max_tx,
-                "n_ty": tier.max_ty
+                "n_ty": tier.max_ty,
             }
         )
 
@@ -287,7 +341,8 @@ class PyramidInfo(BaseModel):
     """
 
     n_tiers: conint(ge=1) = Field(
-        ..., description='The number of tiers in the pyramid.'
+        ...,
+        description="The number of tiers in the pyramid.",
     )
     tiers: List[TierInfo]
 
@@ -295,7 +350,7 @@ class PyramidInfo(BaseModel):
     def from_pyramid(cls, pyramid):
         return cls(
             n_tiers=pyramid.n_levels,
-            tiers=[TierInfo.from_tier(tier) for tier in pyramid]
+            tiers=[TierInfo.from_tier(tier) for tier in pyramid],
         )
 
 
@@ -304,6 +359,7 @@ class SimpleRepresentationInfo(BaseModel):
     Information about an image representation.
 
     """
+
     role: FileRole
     file: FileInfo
 
@@ -321,17 +377,17 @@ class RepresentationInfo(BaseModel):
             return FullRepresentationInfo(
                 role=FileRole.from_path(path),
                 file=FileInfo.from_path(path),
-                pyramid=PyramidInfo.from_pyramid(path.pyramid)
+                pyramid=PyramidInfo.from_pyramid(path.pyramid),
             )
-        else:
-            return SimpleRepresentationInfo(
-                role=FileRole.from_path(path),
-                file=FileInfo.from_path(path)
-            )
+
+        return SimpleRepresentationInfo(
+            role=FileRole.from_path(path),
+            file=FileInfo.from_path(path),
+        )
 
 
 class Microscope(BaseModel):
-    model: Optional[str] = Field(None, description='The microscope model.')
+    model: Optional[str] = Field(None, description="The microscope model.")
 
     @classmethod
     def from_image(cls, image):
@@ -340,17 +396,19 @@ class Microscope(BaseModel):
 
 class Objective(BaseModel):
     nominal_magnification: Optional[float] = Field(
-        None, description='Magnification of the lens specified by the manufacturer.'
+        None,
+        description="Magnification of the lens specified by the manufacturer.",
     )
     calibrated_magnification: Optional[float] = Field(
-        None, description='Magnification of the lens measured by a calibration process.'
+        None,
+        description="Magnification of the lens measured by a calibration process.",
     )
 
     @classmethod
     def from_image(cls, image):
         return cls(
             nominal_magnification=image.objective.nominal_magnification,
-            calibrated_magnification=image.objective.calibrated_magnification
+            calibrated_magnification=image.objective.calibrated_magnification,
         )
 
 
@@ -366,25 +424,27 @@ class InstrumentInfo(BaseModel):
     def from_image(cls, image):
         return cls(
             microscope=Microscope.from_image(image),
-            objective=Objective.from_image(image)
+            objective=Objective.from_image(image),
         )
 
 
 class ChannelsInfoItem(BaseModel):
-    index: conint(ge=0) = Field(..., description='Channel index.')
+    index: conint(ge=0) = Field(..., description="Channel index.")
     suggested_name: Optional[str] = Field(
         None,
-        description='Suggested name for the channel inferred from other properties.',
+        description="Suggested name for the channel inferred from other properties.",
     )
     emission_wavelength: Optional[float] = Field(
-        None, description='Wavelength of emission for a particular channel.'
+        None,
+        description="Wavelength of emission for a particular channel.",
     )
     excitation_wavelength: Optional[float] = Field(
-        None, description='Wavelength of excitation for a particular channel.'
+        None,
+        description="Wavelength of excitation for a particular channel.",
     )
     color: str = Field(
         None,
-        description='Color for the channel (possibly inferred from other properties).'
+        description="Color for the channel (possibly inferred from other properties).",
     )
 
     @classmethod
@@ -392,10 +452,16 @@ class ChannelsInfoItem(BaseModel):
         return cls(
             **{
                 "index": c.index,
-                "emission_wavelength": convert_quantity(c.emission_wavelength, "nanometers"),
-                "excitation_wavelength": convert_quantity(c.excitation_wavelength, "nanometers"),
+                "emission_wavelength": convert_quantity(
+                    c.emission_wavelength,
+                    "nanometers",
+                ),
+                "excitation_wavelength": convert_quantity(
+                    c.excitation_wavelength,
+                    "nanometers",
+                ),
                 "suggested_name": c.suggested_name,
-                "color": c.color.as_hex() if c.color is not None else None
+                "color": c.color.as_hex() if c.color is not None else None,
             }
         )
 
@@ -406,7 +472,8 @@ class ChannelsInfo(BaseModel):
     """
 
     __root__: List[ChannelsInfoItem] = Field(
-        ..., description='Information about channels in an image file.'
+        ...,
+        description="Information about channels in an image file.",
     )
 
     @classmethod
@@ -421,24 +488,28 @@ class AssociatedInfoItem(BaseModel):
 
     width: conint(ge=1) = Field(
         ...,
-        description='The associated image width. It is the number of pixels along X axis.',
+        description="The associated image width. It is the number of pixels along X axis.",
     )
     height: conint(ge=1) = Field(
         ...,
-        description='The associated image height. It is the number of pixels along Y axis.',
+        description="The associated image height. It is the number of pixels along Y axis.",
     )
     n_channels: conint(ge=1) = Field(
         ...,
-        description='The number of channels in the associated image.'
-                    'Grayscale images have 1 channel. RGB images have 3 channels.',
+        description=(
+            "The number of channels in the associated image."
+            "Grayscale images have 1 channel. RGB images have 3 channels."
+        ),
     )
     name: AssociatedName = Field(
         ...,
-        description='The type of associated image.'
-                    ''
-                    '`macro` - A macro image (generally, in slide scanners, a low resolution picture of the entire slide)'
-                    '`label` - A label image (generally a barcode)'
-                    '`thumb` - A pre-computed thumbnail',
+        description=(
+            "The type of associated image."
+            ""
+            "`macro` - A macro image (generally, in slide scanners, a low resolution picture of the entire slide)"
+            "`label` - A label image (generally a barcode)"
+            "`thumb` - A pre-computed thumbnail"
+        ),
     )
 
     @classmethod
@@ -448,7 +519,7 @@ class AssociatedInfoItem(BaseModel):
                 "name": AssociatedName[associated._kind],
                 "width": associated.width,
                 "height": associated.height,
-                "n_channels": associated.n_channels
+                "n_channels": associated.n_channels,
             }
         )
 
@@ -459,14 +530,19 @@ class AssociatedInfo(BaseModel):
     """
 
     __root__: List[AssociatedInfoItem] = Field(
-        ..., description='Information about associated in an image file.'
+        ...,
+        description="Information about associated in an image file.",
     )
 
     @classmethod
     def from_image(cls, image):
         return [
-            AssociatedInfoItem.from_associated(associated) for associated
-            in (image.associated_thumb, image.associated_label, image.associated_macro)
+            AssociatedInfoItem.from_associated(associated)
+            for associated in (
+                image.associated_thumb,
+                image.associated_label,
+                image.associated_macro,
+            )
             if associated.exists
         ]
 
@@ -476,17 +552,17 @@ class MetadataTypeEnum(str, Enum):
     The metadata value type
     """
 
-    STRING = 'STRING'
-    INTEGER = 'INTEGER'
-    DECIMAL = 'DECIMAL'
-    BOOLEAN = 'BOOLEAN'
-    JSON = 'JSON'
-    BASE64 = 'BASE64'
-    DATE = 'DATE'
-    DATETIME = 'DATETIME'
-    TIME = 'TIME'
-    LIST = 'LIST'
-    UNKNOWN = 'UNKNOWN'
+    STRING = "STRING"
+    INTEGER = "INTEGER"
+    DECIMAL = "DECIMAL"
+    BOOLEAN = "BOOLEAN"
+    JSON = "JSON"
+    BASE64 = "BASE64"
+    DATE = "DATE"
+    DATETIME = "DATETIME"
+    TIME = "TIME"
+    LIST = "LIST"
+    UNKNOWN = "UNKNOWN"
 
 
 class Metadata(BaseModel):
@@ -495,11 +571,12 @@ class Metadata(BaseModel):
 
     """
 
-    key: str = Field(..., description='The metadata key')
-    value: Any = Field(..., description='The metadata value')
-    type: MetadataTypeEnum = Field('STRING', description='The metadata value type')
+    key: str = Field(..., description="The metadata key")
+    value: Any = Field(..., description="The metadata value")
+    type: MetadataTypeEnum = Field("STRING", description="The metadata value type")
     namespace: Optional[str] = Field(
-        None, description='The metadata namespace to avoid key name conflicts'
+        None,
+        description="The metadata namespace to avoid key name conflicts",
     )
 
     @classmethod
@@ -508,10 +585,12 @@ class Metadata(BaseModel):
             **{
                 "namespace": metadata.namespace,
                 "key": metadata.key,
-                "value": metadata.value if metadata.metadata_type != MetadataType.UNKNOWN else str(
+                "value": (
                     metadata.value
+                    if metadata.metadata_type != MetadataType.UNKNOWN
+                    else str(metadata.value)
                 ),
-                "type": MetadataTypeEnum[metadata.metadata_type.name]
+                "type": MetadataTypeEnum[metadata.metadata_type.name],
             }
         )
 
@@ -524,14 +603,8 @@ class ImageFullInfo(BaseModel):
     representations: List[RepresentationInfo]
 
 
-@router.get(
-    '/file/{filepath:path}/info',
-    response_model=FileInfo,
-    tags=api_tags
-)
-def show_file(
-    path: Path = Depends(filepath_parameter),
-):
+@router.get("/file/{filepath:path}/info", response_model=FileInfo, tags=api_tags)
+def show_file(path: Path = Depends(filepath_parameter)):
     """
     Get file info
     """
@@ -539,40 +612,38 @@ def show_file(
 
 
 @router.get(
-    '/image/{filepath:path}/info',
+    "/image/{filepath:path}/info",
     response_model=ImageFullInfo,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
-def show_info(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_info(path: Path = Depends(imagepath_parameter)):
     """
     Get all image info
     """
     original = path.get_original()
     check_representation_existence(original)
-    data = dict()
+    data = {}
     data["image"] = ImageInfo.from_image(original)
     data["instrument"] = InstrumentInfo.from_image(original)
     data["associated"] = AssociatedInfo.from_image(original)
     data["channels"] = ChannelsInfo.from_image(original)
-    data["representations"] = [RepresentationInfo.from_path(rpr) for rpr in
-                               original.get_representations()]
+    data["representations"] = [
+        RepresentationInfo.from_path(rpr) for rpr in original.get_representations()
+    ]
     return data
 
 
 # IMAGE
 
+
 @router.get(
-    '/image/{filepath:path}/info/image',
+    "/image/{filepath:path}/info/image",
     response_model=ImageInfo,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
-def show_image(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_image(path: Path = Depends(imagepath_parameter)):
     """
     Get standard image info
     """
@@ -583,15 +654,16 @@ def show_image(
 
 # CHANNELS
 
+
 class ChannelsInfoCollection(CollectionSize):
-    items: ChannelsInfo = Field(None, description='Array of channels', title='Channel')
+    items: ChannelsInfo = Field(None, description="Array of channels", title="Channel")
 
 
 @router.get(
-    '/image/{filepath:path}/info/channels',
+    "/image/{filepath:path}/info/channels",
     response_model=ChannelsInfoCollection,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
 def show_channels(path: Path = Depends(imagepath_parameter)):
     """
@@ -604,15 +676,14 @@ def show_channels(path: Path = Depends(imagepath_parameter)):
 
 # PYRAMID
 
+
 @router.get(
-    '/image/{filepath:path}/info/normalized-pyramid',
+    "/image/{filepath:path}/info/normalized-pyramid",
     response_model=PyramidInfo,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
-def show_normalized_pyramid(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_normalized_pyramid(path: Path = Depends(imagepath_parameter)):
     """
     Get image normalized pyramid
     """
@@ -623,15 +694,14 @@ def show_normalized_pyramid(
 
 # INSTRUMENT
 
+
 @router.get(
-    '/image/{filepath:path}/info/instrument',
+    "/image/{filepath:path}/info/instrument",
     response_model=InstrumentInfo,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
-def show_instrument(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_instrument(path: Path = Depends(imagepath_parameter)):
     """
     Get image instrument info
     """
@@ -642,19 +712,18 @@ def show_instrument(
 
 # ASSOCIATED
 
+
 class AssociatedInfoCollection(CollectionSize):
     items: AssociatedInfo
 
 
 @router.get(
-    '/image/{filepath:path}/info/associated',
+    "/image/{filepath:path}/info/associated",
     response_model=AssociatedInfoCollection,
-    tags=api_tags + ['Associated'],
-    response_class=FastJsonResponse
+    tags=api_tags + ["Associated"],
+    response_class=FastJsonResponse,
 )
-def show_associated(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_associated(path: Path = Depends(imagepath_parameter)):
     """
     Get associated file info
     """
@@ -664,37 +733,46 @@ def show_associated(
 
 
 @router.get(
-    '/image/{filepath:path}/associated/{associated_key}',
-    tags=api_tags + ['Associated']
+    "/image/{filepath:path}/associated/{associated_key}", tags=api_tags + ["Associated"]
 )
 async def show_associated_image(
-    request: Request, response: Response,
+    request: Request,
+    response: Response,
     path: Path = Depends(imagepath_parameter),
     output: ImageOutDisplayQueryParams = Depends(),
     associated_key: AssociatedName = Query(...),
     headers: ImageRequestHeaders = Depends(),
-    config: Settings = Depends(get_settings)
+    config: Settings = Depends(get_settings),
 ):
     return await _show_associated_image(
-        request, response, path, **output.dict(),
-        associated_key=associated_key, headers=headers,
-        config=config
+        request,
+        response,
+        path,
+        **output.dict(),
+        associated_key=associated_key,
+        headers=headers,
+        config=config,
     )
 
 
-@cache_image_response(expire=cache_associated_ttl, vary=['config', 'request', 'response'])
+@cache_image_response(
+    expire=cache_associated_ttl, vary=["config", "request", "response"]
+)
 def _show_associated_image(
-    request: Request, response: Response,  # required for @cache  # noqa
+    request: Request,
+    response: Response,  # required for @cache  # noqa
     path: Path,
-    height, width, length,
+    height,
+    width,
+    length,
     associated_key,
     headers,
-    config: Settings
+    config: Settings,
 ):
     in_image = path.get_spatial()
     check_representation_existence(in_image)
 
-    associated = getattr(in_image, f'associated_{associated_key.value}')
+    associated = getattr(in_image, f"associated_{associated_key.value}")
     if not associated or not associated.exists:
         raise NoAppropriateRepresentationProblem(path, associated_key)
 
@@ -702,31 +780,36 @@ def _show_associated_image(
         OutputExtension.NONE, headers.accept, VISUALISATION_MIMETYPES
     )
     req_size = get_thumb_output_dimensions(associated, height, width, length)
-    out_size = safeguard_output_dimensions(headers.safe_mode, config.output_size_limit, *req_size)
+    out_size = safeguard_output_dimensions(
+        headers.safe_mode,
+        config.output_size_limit,
+        *req_size,
+    )
     out_width, out_height = out_size
 
     return AssociatedResponse(
-        in_image, associated_key, out_width, out_height, out_format
+        in_image,
+        associated_key,
+        out_width,
+        out_height,
+        out_format,
     ).http_response(
         mimetype,
-        extra_headers=add_image_size_limit_header(dict(), *req_size, *out_size)
+        extra_headers=add_image_size_limit_header({}, *req_size, *out_size),
     )
 
 
 # METADATA
+
 
 class MetadataCollection(CollectionSize):
     items: List[Metadata]
 
 
 @router.get(
-    '/image/{filepath:path}/metadata',
-    response_model=MetadataCollection,
-    tags=api_tags
+    "/image/{filepath:path}/metadata", response_model=MetadataCollection, tags=api_tags
 )
-def show_metadata(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_metadata(path: Path = Depends(imagepath_parameter)):
     """
     Get image metadata
     """
@@ -739,36 +822,38 @@ def show_metadata(
 
 # ANNOTATIONS
 
+
 class MetadataAnnotation(BaseModel):
     """
     A metadata annotation is an annotation stored in an image file.
 
     """
+
     geometry: str = Field(
         ...,
-        description='A geometry described in Well-known text (WKT)',
-        example='POINT(10 10)',
+        description="A geometry described in Well-known text (WKT)",
+        example="POINT(10 10)",
     )
     terms: List[str] = Field(
         ...,
-        description='A list of terms (labels) associated to the annotation',
-        example='ROI'
+        description="A list of terms (labels) associated to the annotation",
+        example="ROI",
     )
     properties: dict = Field(
         ...,
-        description='A set of key-value pairs associated to the annotation'
+        description="A set of key-value pairs associated to the annotation",
     )
     channels: List[int] = Field(
         ...,
-        description='Channel indexes associated to the annotation'
+        description="Channel indexes associated to the annotation",
     )
     z_slices: List[int] = Field(
         ...,
-        description='Z-slice indexes associated to the annotation'
+        description="Z-slice indexes associated to the annotation",
     )
     timepoints: List[int] = Field(
         ...,
-        description='Timepoint indexes associated to the annotation'
+        description="Timepoint indexes associated to the annotation",
     )
 
     @classmethod
@@ -780,7 +865,7 @@ class MetadataAnnotation(BaseModel):
                 "properties": annot.properties,
                 "channels": annot.channels,
                 "z_slices": annot.z_slices,
-                "timepoints": annot.timepoints
+                "timepoints": annot.timepoints,
             }
         )
 
@@ -790,53 +875,50 @@ class MetadataAnnotationCollection(CollectionSize):
 
 
 @router.get(
-    '/image/{filepath:path}/metadata/annotations',
+    "/image/{filepath:path}/metadata/annotations",
     response_model=MetadataAnnotationCollection,
-    tags=api_tags
+    tags=api_tags,
 )
-def show_metadata_annotations(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_metadata_annotations(path: Path = Depends(imagepath_parameter)):
     """
     Get image annotation metadata
     """
     original = path.get_original()
     check_representation_existence(original)
     return response_list(
-        [MetadataAnnotation.from_metadata_annotation(a)
-         for a in original.annotations]
+        [MetadataAnnotation.from_metadata_annotation(a) for a in original.annotations]
     )
 
 
 # REPRESENTATIONS
+
 
 class RepresentationInfoCollection(CollectionSize):
     items: List[RepresentationInfo]
 
 
 @router.get(
-    '/image/{filepath:path}/info/representations',
+    "/image/{filepath:path}/info/representations",
     response_model=RepresentationInfoCollection,
     tags=api_tags,
-    response_class=FastJsonResponse
+    response_class=FastJsonResponse,
 )
-def list_representations(
-    path: Path = Depends(imagepath_parameter)
-):
+def list_representations(path: Path = Depends(imagepath_parameter)):
     """
     Get all image representation info
     """
-    return response_list([RepresentationInfo.from_path(rpr) for rpr in path.get_representations()])
+    return response_list(
+        [RepresentationInfo.from_path(rpr) for rpr in path.get_representations()]
+    )
 
 
 @router.get(
-    '/image/{filepath:path}/info/representations/{representation}',
+    "/image/{filepath:path}/info/representations/{representation}",
     response_model=RepresentationInfo,
-    tags=api_tags
+    tags=api_tags,
 )
 def show_representation(
-    representation: FileRole,
-    path: Path = Depends(imagepath_parameter)
+    representation: FileRole, path: Path = Depends(imagepath_parameter)
 ):
     """
     Get image representation info
