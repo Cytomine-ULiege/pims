@@ -12,7 +12,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-# pylint: disable=broad-exception-caught,used-before-assignment
+# pylint: disable=broad-exception-caught
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 

@@ -12,7 +12,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-# pylint: disable=logging-fstring-interpolation,used-before-assignment
+# pylint: disable=logging-fstring-interpolation
+
+from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod

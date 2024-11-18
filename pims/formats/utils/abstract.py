@@ -12,6 +12,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=not-callable
+
+from __future__ import annotations
+
 import logging
 import re
 from abc import ABC

@@ -14,6 +14,8 @@
 
 # pylint: disable=unused-argument
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 

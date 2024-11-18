@@ -12,6 +12,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=broad-exception-caught,protected-access
+
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Type
 
 import numpy as np
