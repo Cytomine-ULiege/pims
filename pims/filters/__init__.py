@@ -156,8 +156,9 @@ def _discover_filter_plugins():
     ]
 
     logger.info(
-        f"[green bold]Filter plugins: found {len(plugins)} plugin(s)[/] "
-        f"[yellow]({', '.join(plugins)})",
+        "[green bold]Filter plugins: found %d plugin(s)[/] " "[yellow](%s)",
+        len(plugins),
+        ", ".join(plugins),
     )
     return plugins
 
@@ -196,12 +197,15 @@ def _find_filters_in_module(module_name):
                     filters.append(var)
                     imgfilter.init()
                     logger.info(
-                        f"[green] * [yellow]{imgfilter.get_identifier()} "
-                        f"- {imgfilter.get_name()}[/] imported."
+                        "[green] * [yellow]%s - %s[/] imported.",
+                        imgfilter.get_identifier(),
+                        imgfilter.get_name(),
                     )
         except ImportError as e:
             logger.error(
-                f"{module_name} submodule cannot be checked for filters !", exc_info=e
+                "%s submodule cannot be checked for filters !",
+                module_name,
+                exc_info=e,
             )
     return filters
 
@@ -218,7 +222,8 @@ def _get_all_filters():
     filters = []
     for module_name in FILTER_PLUGINS:
         logger.info(
-            f"[green bold]Importing filters from [yellow]{module_name}[/] plugin..."
+            "[green bold]Importing filters from [yellow]%s[/] plugin...",
+            module_name,
         )
         filters.extend(_find_filters_in_module(module_name))
 

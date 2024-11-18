@@ -101,8 +101,9 @@ def _discover_format_plugins() -> List[Union[str, EntryPoint]]:
         plugins = reorder_plugins(plugins, get_settings().checker_resolution_file)
 
     logger.info(
-        f"[green bold]Format plugins: found {len(plugins)} plugin(s)[/] "
-        f"[yellow]({', '.join(plugin_names)})"
+        "[green bold]Format plugins: found %d plugin(s)[/] [yellow](%s)",
+        len(plugins),
+        ", ".join(plugin_names),
     )
     return plugins
 
@@ -137,12 +138,14 @@ def _find_formats_in_module(mod: ModuleType) -> List[Type[AbstractFormat]]:
                     format.init()
 
                     logger.info(
-                        f"[green] * [yellow]{format.get_identifier()} "
-                        f"- {format.get_name()}[/] imported."
+                        "[green] * [yellow]%s - %s[/] imported.",
+                        format.get_identifier(),
+                        format.get_name(),
                     )
         except ImportError as e:
             logger.error(
-                f"{submodule_name} submodule cannot be checked for " f"formats !",
+                "%s submodule cannot be checked for formats !",
+                submodule_name,
                 exc_info=e,
             )
     return formats
@@ -163,7 +166,8 @@ def _get_all_formats() -> List[Type[AbstractFormat]]:
 
         module_name = plugin.module if entrypoint_plugin else plugin
         logger.info(
-            f"[green bold]Importing formats from " f"[yellow]{module_name}[/] plugin..."
+            "[green bold]Importing formats from [yellow]%s[/] plugin...",
+            module_name,
         )
 
         if entrypoint_plugin:
