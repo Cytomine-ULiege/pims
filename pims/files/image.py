@@ -11,9 +11,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING, Tuple, Union
+# pylint: disable=broad-exception-caught,used-before-assignment
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
 from pint import Quantity
@@ -29,13 +30,16 @@ from pims.processing.region import Region, Tile
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from pims.formats import AbstractFormat
     from pims.api.utils.models import HistogramType
     from pims.files.histogram import Histogram
+    from pims.formats import AbstractFormat
     from pims.formats.utils.structures.annotations import ParsedMetadataAnnotation
     from pims.formats.utils.structures.metadata import (
-        ImageAssociated, ImageChannel, ImageMicroscope,
-        ImageObjective, MetadataStore
+        ImageAssociated,
+        ImageChannel,
+        ImageMicroscope,
+        ImageObjective,
+        MetadataStore,
     )
     from pims.formats.utils.structures.pyramid import Pyramid
 
@@ -45,20 +49,23 @@ class Image(Path):
     An image. Acts as a facade in front of underlying technical details
     about specific image formats.
     """
+
     def __init__(
-        self, *pathsegments,
-        factory: FormatFactory = None, format: AbstractFormat = None
+        self,
+        *pathsegments,
+        factory: FormatFactory = None,
+        format: AbstractFormat = None,
     ):
         super().__init__(*pathsegments)
 
         _format = factory.match(self) if factory else format
         if _format is None:
             raise NoMatchingFormatProblem(self)
-        else:
-            if _format.path.absolute() != self.absolute():
-                # Paths mismatch: reload format
-                _format = _format.from_path(self)
-            self._format = _format
+
+        if _format.path.absolute() != self.absolute():
+            # Paths mismatch: reload format
+            _format = _format.from_path(self)
+        self._format = _format
 
     @property
     def format(self) -> AbstractFormat:
@@ -134,7 +141,7 @@ class Image(Path):
 
     @property
     def max_value(self) -> int:
-        return 2 ** self.significant_bits - 1
+        return 2**self.significant_bits - 1
 
     @property
     def value_range(self) -> range:
@@ -197,8 +204,8 @@ class Image(Path):
         histogram = self.get_histogram()
         if histogram:
             return histogram
-        else:
-            return self._format.histogram
+
+        return self._format.histogram
 
     def histogram_type(self) -> HistogramType:
         return self.histogram.type()
@@ -228,8 +235,11 @@ class Image(Path):
         return self.histogram.plane_histogram(c, z, t)
 
     def tile(
-        self, tile: Tile, c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None,
-        t: Optional[int] = None
+        self,
+        tile: Tile,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get a tile.
@@ -265,9 +275,13 @@ class Image(Path):
             raise e
 
     def window(
-        self, region: Region, out_width: int, out_height: int,
-        c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None,
-        t: Optional[int] = None
+        self,
+        region: Region,
+        out_width: int,
+        out_height: int,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get an image window whose output dimensions are the nearest possible to
@@ -317,8 +331,13 @@ class Image(Path):
             raise e
 
     def thumbnail(
-        self, out_width: int, out_height: int, precomputed: bool = False,
-        c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None, t: Optional[int] = None
+        self,
+        out_width: int,
+        out_height: int,
+        precomputed: bool = False,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get an image thumbnail whose dimensions are the nearest possible to
@@ -428,9 +447,13 @@ class Image(Path):
             return None
 
     def check_integrity(
-        self, lazy_mode: bool = False, check_metadata: bool = True,
-        check_tile: bool = False, check_thumb: bool = False,
-        check_window: bool = False, check_associated: bool = False
+        self,
+        lazy_mode: bool = False,
+        check_metadata: bool = True,
+        check_tile: bool = False,
+        check_thumb: bool = False,
+        check_window: bool = False,
+        check_associated: bool = False,
     ) -> List[Tuple[str, Exception]]:
         """
         Check integrity of the image: ensure that asked checks do not raise
@@ -447,12 +470,27 @@ class Image(Path):
 
         if check_metadata:
             attributes = (
-                'width', 'height', 'depth', 'duration', 'n_channels',
-                'pixel_type', 'physical_size_x', 'physical_size_y',
-                'physical_size_z', 'frame_rate', 'description',
-                'acquisition_datetime', 'channels', 'objective', 'microscope',
-                'associated_thumb', 'associated_label', 'associated_macro',
-                'raw_metadata', 'annotations', 'pyramid'
+                "width",
+                "height",
+                "depth",
+                "duration",
+                "n_channels",
+                "pixel_type",
+                "physical_size_x",
+                "physical_size_y",
+                "physical_size_z",
+                "frame_rate",
+                "description",
+                "acquisition_datetime",
+                "channels",
+                "objective",
+                "microscope",
+                "associated_thumb",
+                "associated_label",
+                "associated_macro",
+                "raw_metadata",
+                "annotations",
+                "pyramid",
             )
             for attr in attributes:
                 try:
@@ -470,7 +508,7 @@ class Image(Path):
                 ty = tier.max_ty // 2
                 self.tile(Tile(tier, tx, ty))
             except Exception as e:
-                errors.append(('tile', e))
+                errors.append(("tile", e))
                 if lazy_mode:
                     return errors
 
@@ -478,7 +516,7 @@ class Image(Path):
             try:
                 self.thumbnail(128, 128)
             except Exception as e:
-                errors.append(('thumbnail', e))
+                errors.append(("thumbnail", e))
                 if lazy_mode:
                     return errors
 
@@ -486,11 +524,9 @@ class Image(Path):
             try:
                 w = round(0.1 * self.width)
                 h = round(0.1 * self.height)
-                self.window(
-                    Region(self.height - h, self.width - w, w, h), 128, 128
-                )
+                self.window(Region(self.height - h, self.width - w, w, h), 128, 128)
             except Exception as e:
-                errors.append(('window', e))
+                errors.append(("window", e))
                 if lazy_mode:
                     return errors
 
@@ -498,21 +534,21 @@ class Image(Path):
             try:
                 self.thumbnail(128, 128, precomputed=True)
             except Exception as e:
-                errors.append(('precomputed_thumbnail', e))
+                errors.append(("precomputed_thumbnail", e))
                 if lazy_mode:
                     return errors
 
             try:
                 self.label(128, 128)
             except Exception as e:
-                errors.append(('label', e))
+                errors.append(("label", e))
                 if lazy_mode:
                     return errors
 
             try:
                 self.macro(128, 128)
             except Exception as e:
-                errors.append(('macro', e))
+                errors.append(("macro", e))
                 if lazy_mode:
                     return errors
 
