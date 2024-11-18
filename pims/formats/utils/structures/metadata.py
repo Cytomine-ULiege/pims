@@ -94,7 +94,7 @@ class Metadata:
         Try to infer the metadata type from the metadata value.
         """
         for mt in MetadataType:
-            if isinstance(self._value, mt.python_type):
+            if type(self._value) == mt.python_type:  # pylint: disable=C0123
                 return mt
         return MetadataType.UNKNOWN
 
