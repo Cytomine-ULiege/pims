@@ -156,7 +156,7 @@ def _discover_filter_plugins():
     ]
 
     logger.info(
-        "[green bold]Filter plugins: found %d plugin(s)[/] " "[yellow](%s)",
+        "[green bold]Filter plugins: found %d plugin(s)[/] [yellow](%s)",
         len(plugins),
         ", ".join(plugins),
     )

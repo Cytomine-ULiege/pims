@@ -6,7 +6,7 @@ from rich.console import ConsoleRenderable
 from rich.logging import RichHandler
 from rich.text import Text
 
-RICH_FORMAT_REGEX = re.compile("[\[].*?[\]]")
+RICH_FORMAT_REGEX = re.compile(r"[\[].*?[\]]")
 
 
 class PimsHandler(RichHandler):
