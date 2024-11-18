@@ -28,9 +28,7 @@ settings = get_settings()
 
 broker_url = f"{settings.task_queue_user}:{settings.task_queue_password}@{settings.task_queue_url}"
 celery_app = Celery(
-    "worker",
-    broker=f"amqp://{broker_url}//",
-    backend=f"rpc://{broker_url}//"
+    "worker", broker=f"amqp://{broker_url}//", backend=f"rpc://{broker_url}//"
 )
 
 celery_app.conf.update(
@@ -41,8 +39,8 @@ celery_app.conf.update(
         "max_retries": 3,
         "interval_start": 0,
         "interval_step": 0.2,
-        "interval_max": 0.5
-    }
+        "interval_max": 0.5,
+    },
 )
 
 celery_app.conf.task_routes = {
@@ -69,12 +67,17 @@ BG_TASK_MAPPING = {
 
 
 def func_from_str(mod_fuc_name: str) -> Callable:
-    module, func = mod_fuc_name.rsplit('.', 1)
+    module, func = mod_fuc_name.rsplit(".", 1)
     task_func = getattr(import_module(module), func)
     return task_func
 
 
-def send_task(name, args=None, kwargs=None, starlette_background: BackgroundTasks = None):
+def send_task(
+    name,
+    args=None,
+    kwargs=None,
+    starlette_background: BackgroundTasks = None,
+):
     """
     Send a task to PIMS queue.
 
@@ -103,20 +106,21 @@ def send_task(name, args=None, kwargs=None, starlette_background: BackgroundTask
         The background task context from FastAPI/Starlette. Mandatory to send the task to this
         queue context.
     """
+
     def _try_starlette_background():
         if starlette_background is not None:
             bg_task_name = BG_TASK_MAPPING.get(name)
             if bg_task_name is None:
-                logger.error(f"Task {name} cannot be sent to Background tasks.")
+                logger.error("Task %s cannot be sent to Background tasks.", name)
                 return
 
             task_func = func_from_str(bg_task_name)
             if task_func is None:
-                logger.error(f"Task {name} cannot be sent to Background tasks.")
+                logger.error("Task %s cannot be sent to Background tasks.", name)
                 return
 
             valid_args = args if args else ()
-            valid_kwargs = kwargs if type(kwargs) is dict else dict()
+            valid_kwargs = kwargs if isinstance(kwargs, dict) else {}
             starlette_background.add_task(task_func, *valid_args, **valid_kwargs)
 
     if not settings.task_queue_enabled:
@@ -130,12 +134,13 @@ def send_task(name, args=None, kwargs=None, starlette_background: BackgroundTask
             celery_app.send_task(task_name, args=args, kwargs=kwargs)
         else:
             log_func = logger.debug if try_bg else logger.error
-            log_func(f"Task {name} cannot be sent to Celery worker. {try_bg}")
+            log_func("Task %s cannot be sent to Celery worker. %s", name, try_bg)
             _try_starlette_background()
-    except Exception:  # noqa
+    except Exception:  # pylint: disable=broad-exception-caught
         log_func = logger.warning if try_bg else logger.error
         log_func(
-            f"Task {name} cannot be sent to Celery worker due to communication error. "
-            f"{try_bg}"
+            "Task %s cannot be sent to Celery worker due to communication error. %s",
+            name,
+            try_bg,
         )
         _try_starlette_background()
