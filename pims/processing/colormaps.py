@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=no-name-in-module,protected-access,unused-argument
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List, Optional, Union
@@ -39,6 +41,7 @@ class ColormapType(str, Enum):
     * `QUALITATIVE` - often are miscellaneous colors; should be used to
     represent information which does not have ordering or relationships
     """
+
     PERCEPTUAL_UNIFORM = "PERCEPTUAL_UNIFORM"
     SEQUENTIAL = "SEQUENTIAL"
     DIVERGING = "DIVERGING"
@@ -61,13 +64,15 @@ class Colormap(ABC):
     @property
     def name(self) -> str:
         inverted = " (Inverted)" if self.inverted else ""
-        return self.id.replace('_', ' ').title() + inverted
+        return self.id.replace("_", " ").title() + inverted
 
     @abstractmethod
     def lut(
-        self, size: int = 256, bitdepth: int = 8,
+        self,
+        size: int = 256,
+        bitdepth: int = 8,
         n_components: Optional[int] = None,
-        force_black_as_first: bool = False
+        force_black_as_first: bool = False,
     ) -> LookUpTable:
         """
         Build a look-up table (LUT) for the colormap.
@@ -92,7 +97,6 @@ class Colormap(ABC):
         lut
             the look-up table of shape (size, n_components)
         """
-        pass
 
     def n_components(self) -> int:
         """
@@ -107,15 +111,14 @@ class Colormap(ABC):
         return np.tile(lut, (height, 1, 1))
 
     def __eq__(self, o: object) -> bool:
-        return isinstance(o, Colormap) and \
-               o.identifier == self.identifier
+        return isinstance(o, Colormap) and o.identifier == self.identifier
 
 
 class MatplotlibColormap(Colormap):
     def __init__(self, id: str, cmap_type: ColormapType, inverted: bool = False):
         super().__init__(id, cmap_type, inverted)
 
-        self._mpl_cmap = dict()
+        self._mpl_cmap = {}
         self._init_cmap(256)
 
     def _init_cmap(self, size: int):
@@ -128,9 +131,11 @@ class MatplotlibColormap(Colormap):
         self._mpl_cmap[size]._init()  # noqa
 
     def lut(
-        self, size: int = 256, bitdepth: int = 8,
+        self,
+        size: int = 256,
+        bitdepth: int = 8,
         n_components: Optional[int] = None,
-        force_black_as_first: bool = False
+        force_black_as_first: bool = False,
     ) -> LookUpTable:
         if n_components is None or n_components > 3:
             n_components = self.n_components()
@@ -143,7 +148,7 @@ class MatplotlibColormap(Colormap):
         if force_black_as_first:
             lut[0, :] = 0
 
-        lut *= (2 ** bitdepth - 1)
+        lut *= 2**bitdepth - 1
         lut = np.rint(lut)
         return lut.astype(np_dtype(bitdepth))
 
@@ -162,9 +167,11 @@ class ColorColormap(Colormap):
         return 1 if r == g == b else 3
 
     def lut(
-        self, size: int = 256, bitdepth: int = 8,
+        self,
+        size: int = 256,
+        bitdepth: int = 8,
         n_components: Optional[int] = None,
-        force_black_as_first: bool = False
+        force_black_as_first: bool = False,
     ) -> LookUpTable:
         components = self._color.as_float_tuple(alpha=False)
         if n_components is None or n_components > 3:
@@ -184,19 +191,21 @@ class ColorColormap(Colormap):
         if force_black_as_first:
             lut[0, :] = 0
 
-        lut = lut * (2 ** bitdepth - 1)
+        lut = lut * (2**bitdepth - 1)
         lut = np.rint(lut)
         return lut.astype(np_dtype(bitdepth))
 
 
 def default_lut(
-    size: int = 256, bitdepth: int = 8, n_components: int = 1,
-    force_black_as_first: Optional[bool] = False  # Ignored but here for compat
+    size: int = 256,
+    bitdepth: int = 8,
+    n_components: int = 1,
+    force_black_as_first: Optional[bool] = False,  # Ignored but here for compat
 ) -> LookUpTable:
     """Default LUT"""
-    return np.rint(np.stack(
-        (np.arange(size),) * n_components, axis=-1
-    )).astype(np_dtype(bitdepth))
+    return np.rint(np.stack((np.arange(size),) * n_components, axis=-1)).astype(
+        np_dtype(bitdepth)
+    )
 
 
 def combine_lut(lut_a: LookUpTable, lut_b: LookUpTable) -> LookUpTable:
@@ -252,31 +261,101 @@ def get_lut_from_stacked(
     return lut
 
 
-mpl_cmaps = dict()
+mpl_cmaps = {}
 
 mpl_cmaps[ColormapType.PERCEPTUAL_UNIFORM] = [
-    'viridis', 'plasma', 'inferno', 'magma', 'cividis']
+    "viridis",
+    "plasma",
+    "inferno",
+    "magma",
+    "cividis",
+]
 mpl_cmaps[ColormapType.SEQUENTIAL] = [
-    'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
-    'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
-    'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn',
-    'binary', 'gist_yarg', 'gist_gray', 'bone',
-    'spring', 'summer', 'autumn', 'winter', 'cool', 'Wistia',
-    'hot', 'afmhot', 'gist_heat', 'copper']
+    "Greys",
+    "Purples",
+    "Blues",
+    "Greens",
+    "Oranges",
+    "Reds",
+    "YlOrBr",
+    "YlOrRd",
+    "OrRd",
+    "PuRd",
+    "RdPu",
+    "BuPu",
+    "GnBu",
+    "PuBu",
+    "YlGnBu",
+    "PuBuGn",
+    "BuGn",
+    "YlGn",
+    "binary",
+    "gist_yarg",
+    "gist_gray",
+    "bone",
+    "spring",
+    "summer",
+    "autumn",
+    "winter",
+    "cool",
+    "Wistia",
+    "hot",
+    "afmhot",
+    "gist_heat",
+    "copper",
+]
 mpl_cmaps[ColormapType.DIVERGING] = [
-    'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu',
-    'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
+    "PiYG",
+    "PRGn",
+    "BrBG",
+    "PuOr",
+    "RdGy",
+    "RdBu",
+    "RdYlBu",
+    "RdYlGn",
+    "Spectral",
+    "coolwarm",
+    "bwr",
+    "seismic",
+]
 mpl_cmaps[ColormapType.CYCLIC] = [
-    'twilight', 'twilight_shifted', 'hsv']
+    "twilight",
+    "twilight_shifted",
+    "hsv",
+]
 mpl_cmaps[ColormapType.QUALITATIVE] = [
-    'Pastel1', 'Pastel2', 'Paired', 'Accent',
-    'Dark2', 'Set1', 'Set2', 'Set3',
-    'tab10', 'tab20', 'tab20b', 'tab20c']
+    "Pastel1",
+    "Pastel2",
+    "Paired",
+    "Accent",
+    "Dark2",
+    "Set1",
+    "Set2",
+    "Set3",
+    "tab10",
+    "tab20",
+    "tab20b",
+    "tab20c",
+]
 mpl_cmaps[ColormapType.MISCELLANEOUS] = [
-    'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
-    'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg',
-    'gist_rainbow', 'rainbow', 'jet', 'turbo', 'nipy_spectral',
-    'gist_ncar']
+    "flag",
+    "prism",
+    "ocean",
+    "gist_earth",
+    "terrain",
+    "gist_stern",
+    "gnuplot",
+    "gnuplot2",
+    "CMRmap",
+    "cubehelix",
+    "brg",
+    "gist_rainbow",
+    "rainbow",
+    "jet",
+    "turbo",
+    "nipy_spectral",
+    "gist_ncar",
+]
 
 # Custom colormaps
 _heatmap_data = (
@@ -284,11 +363,13 @@ _heatmap_data = (
     (0.0, 1.0, 1.0),
     (0.0, 1.0, 0.0),
     (1.0, 1.0, 0.0),
-    (1.0, 0.0, 0.0)
+    (1.0, 0.0, 0.0),
 )
 _custom_cmaps = [
-    (MplLinearSegmentedColormap.from_list("heatmap", _heatmap_data),
-     ColormapType.SEQUENTIAL)
+    (
+        MplLinearSegmentedColormap.from_list("heatmap", _heatmap_data),
+        ColormapType.SEQUENTIAL,
+    )
 ]
 for custom_cmap in _custom_cmaps:
     mpl, ctype = custom_cmap
@@ -319,24 +400,23 @@ ALL_COLORMAPS = {**COLORMAPS, **COLOR_COLORMAPS}
 
 # Default colormaps per channel index
 DEFAULT_CHANNEL_COLORMAPS = {
-    0: ALL_COLORMAPS['RED'],
-    1: ALL_COLORMAPS['LIME'],
-    2: ALL_COLORMAPS['BLUE'],
-    3: ALL_COLORMAPS['CYAN'],
-    4: ALL_COLORMAPS['MAGENTA'],
-    5: ALL_COLORMAPS['YELLOW']
+    0: ALL_COLORMAPS["RED"],
+    1: ALL_COLORMAPS["LIME"],
+    2: ALL_COLORMAPS["BLUE"],
+    3: ALL_COLORMAPS["CYAN"],
+    4: ALL_COLORMAPS["MAGENTA"],
+    5: ALL_COLORMAPS["YELLOW"],
 }
 
-BLACK_COLORMAP = ALL_COLORMAPS['BLACK']
+BLACK_COLORMAP = ALL_COLORMAPS["BLACK"]
 
-RGB_COLORMAPS = [
-    ALL_COLORMAPS['RED'], ALL_COLORMAPS['LIME'], ALL_COLORMAPS['BLUE']
-]
+RGB_COLORMAPS = [ALL_COLORMAPS["RED"], ALL_COLORMAPS["LIME"], ALL_COLORMAPS["BLUE"]]
 
 RG_COLORMAPS = RGB_COLORMAPS[:2]
 
 
 def is_rgb_colormapping(colormaps: List[Colormap]) -> bool:
     """Check that given colormaps correspond to a RG(B) colormapping."""
-    return ((len(colormaps) == 3 and colormaps == RGB_COLORMAPS)
-            or (len(colormaps) == 2 and colormaps == RG_COLORMAPS))
+    return (len(colormaps) == 3 and colormaps == RGB_COLORMAPS) or (
+        len(colormaps) == 2 and colormaps == RG_COLORMAPS
+    )

@@ -11,22 +11,29 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 from PIL.Image import Image as PILImage
-from pyvips import (
-    Image as VIPSImage,
-    Interpretation as VIPSInterpretation, Size as VIPSSize  # noqa
-)
+from pyvips import Image as VIPSImage
+from pyvips import Interpretation as VIPSInterpretation
+from pyvips import Size as VIPSSize
 
 from pims.api.utils.mimetype import OutputExtension
 from pims.api.utils.models import ChannelReduction, Colorspace
-from pims.processing.adapters import RawImagePixels, convert_to, numpy_to_vips, pil_to_numpy
-from pims.processing.colormaps import LookUpTable, StackedLookUpTables, get_lut_from_stacked
+from pims.processing.adapters import (
+    RawImagePixels,
+    convert_to,
+    numpy_to_vips,
+    pil_to_numpy,
+)
+from pims.processing.colormaps import (
+    LookUpTable,
+    StackedLookUpTables,
+    get_lut_from_stacked,
+)
 from pims.utils.vips import bandjoin, bandreduction, vips_dtype, vips_format_to_dtype
 
 if TYPE_CHECKING:
@@ -56,60 +63,74 @@ class ImagePixelsImpl(ABC):
         self._context = value
 
     @abstractmethod
-    def append_channel(self, pixels) -> ImagePixelsImpl:
+    def append_channel(self, pixels) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def prepare_channels(self, required_indexes: List[int]) -> ImagePixelsImpl:
+    def prepare_channels(self, required_indexes: List[int]) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def apply_lut(self, lut: LookUpTable) -> ImagePixelsImpl:
+    def apply_lut(self, lut: LookUpTable) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
     def apply_lut_stack(
-        self, lut_stack: StackedLookUpTables, reduction: ChannelReduction, is_rgb: bool
-    ) -> ImagePixelsImpl:
+        self,
+        lut_stack: StackedLookUpTables,
+        reduction: ChannelReduction,
+        is_rgb: bool,
+    ) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def resize(self, width: int, height: int) -> ImagePixelsImpl:
+    def resize(self, width: int, height: int) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def channel_reduction(self, reduction: ChannelReduction) -> ImagePixelsImpl:
+    def channel_reduction(self, reduction: ChannelReduction) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def change_colorspace(self, colorspace: Colorspace) -> ImagePixelsImpl:
+    def change_colorspace(self, colorspace: Colorspace) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def int_clip(self) -> ImagePixelsImpl:
+    def int_clip(self) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
     def add_transparency(
-        self, bg_transparency: int, transparency_mask: np.ndarray
-    ) -> ImagePixelsImpl:
+        self,
+        bg_transparency: int,
+        transparency_mask: np.ndarray,
+    ) -> "ImagePixelsImpl":
         pass
 
     @abstractmethod
-    def draw_on(self, draw: np.ndarray, condition_mask: np.ndarray) -> ImagePixelsImpl:
+    def draw_on(
+        self,
+        draw: np.ndarray,
+        condition_mask: np.ndarray,
+    ) -> "ImagePixelsImpl":
         pass
 
-    def apply_filter(self, im_filter: AbstractFilter) -> ImagePixelsImpl:
+    def apply_filter(self, im_filter: AbstractFilter) -> "ImagePixelsImpl":
         if self.implementation() in im_filter.implementations:
             self.pixels = im_filter(self.pixels)
             return self
 
-        return self.context.transition_to(
-            im_filter.implementations[0]
-        ).apply_filter(im_filter)
+        return self.context.transition_to(im_filter.implementations[0]).apply_filter(
+            im_filter
+        )
 
     @abstractmethod
-    def compress(self, format: OutputExtension, bitdepth: int, **format_params) -> bytes:
+    def compress(
+        self,
+        format: OutputExtension,
+        bitdepth: int,
+        **format_params,
+    ) -> bytes:
         pass
 
 
@@ -131,12 +152,17 @@ class NumpyImagePixels(ImagePixelsImpl):
         return self.context.transition_to(VIPSImage).apply_lut(lut)
 
     def apply_lut_stack(
-        self, lut_stack: StackedLookUpTables, reduction: ChannelReduction, is_rgb: bool
+        self,
+        lut_stack: StackedLookUpTables,
+        reduction: ChannelReduction,
+        is_rgb: bool,
     ) -> ImagePixelsImpl:
         # TODO
-        return self.context.transition_to(
-            VIPSImage
-        ).apply_lut_stack(lut_stack, reduction, is_rgb)
+        return self.context.transition_to(VIPSImage).apply_lut_stack(
+            lut_stack,
+            reduction,
+            is_rgb,
+        )
 
     def resize(self, width: int, height: int) -> ImagePixelsImpl:
         return self.context.transition_to(VIPSImage).resize(width, height)
@@ -158,20 +184,20 @@ class NumpyImagePixels(ImagePixelsImpl):
         return self
 
     def change_colorspace(self, colorspace: Colorspace) -> ImagePixelsImpl:
-        return self.context.transition_to(VIPSImage).change_colorspace(
-            colorspace
-        )
+        return self.context.transition_to(VIPSImage).change_colorspace(colorspace)
 
     def int_clip(self) -> ImagePixelsImpl:
         dtype = self.pixels.dtype
-        if dtype == np.uint8 or dtype == np.int8:
+        if dtype in (np.int8, np.uint8):
             self.pixels = np.clip(self.pixels, 0, 255).astype(np.uint8)
         else:
             self.pixels = np.clip(self.pixels, 0, 65535).astype(np.uint16)
         return self
 
     def add_transparency(
-        self, bg_transparency: int, transparency_mask: np.ndarray
+        self,
+        bg_transparency: int,
+        transparency_mask: np.ndarray,
     ) -> ImagePixelsImpl:
         transparency_mask = transparency_mask.astype(self.pixels.dtype)
         return self.append_channel(transparency_mask)
@@ -184,9 +210,16 @@ class NumpyImagePixels(ImagePixelsImpl):
         self.pixels = np.where(condition_mask, self.pixels, draw)  # check broadcast
         return self
 
-    def compress(self, format: OutputExtension, bitdepth: int, **format_params) -> bytes:
+    def compress(
+        self,
+        format: OutputExtension,
+        bitdepth: int,
+        **format_params,
+    ) -> bytes:
         return self.context.transition_to(VIPSImage).compress(
-            format, bitdepth, **format_params
+            format,
+            bitdepth,
+            **format_params,
         )
 
     def implementation(self):
@@ -215,34 +248,40 @@ class VipsImagePixels(ImagePixelsImpl):
         return self
 
     def apply_lut_stack(
-        self, lut_stack: StackedLookUpTables, reduction: ChannelReduction, is_rgb: bool
+        self,
+        lut_stack: StackedLookUpTables,
+        reduction: ChannelReduction,
+        is_rgb: bool,
     ) -> ImagePixelsImpl:
         stack_size, _, n_components = lut_stack.shape
         if stack_size == 1:
             # As stack size is 1, reduction can be ignored.
             return self.apply_lut(get_lut_from_stacked(lut_stack))
-        elif n_components == 1:
+
+        if n_components == 1:
             lut_stack = np.swapaxes(lut_stack, 0, 2)
             pixels = self.apply_lut(get_lut_from_stacked(lut_stack))
             if not is_rgb:
                 return pixels.channel_reduction(reduction)
             return pixels
-        else:
-            channels = list()
-            for i, channel in enumerate(self.pixels.bandsplit()):
-                lut = get_lut_from_stacked(lut_stack, i, as_stack=True)
-                channels.append(channel.maplut(convert_to(lut, VIPSImage)))
 
-            if reduction != ChannelReduction.ADD:
-                raise ValueError(f"{reduction} should not happen here!")
+        channels = []
+        for i, channel in enumerate(self.pixels.bandsplit()):
+            lut = get_lut_from_stacked(lut_stack, i, as_stack=True)
+            channels.append(channel.maplut(convert_to(lut, VIPSImage)))
 
-            self.pixels = bandreduction(channels, ChannelReduction.ADD)
-            return self
+        if reduction != ChannelReduction.ADD:
+            raise ValueError(f"{reduction} should not happen here!")
+
+        self.pixels = bandreduction(channels, ChannelReduction.ADD)
+        return self
 
     def resize(self, width: int, height: int) -> ImagePixelsImpl:
         if self.pixels.width != width or self.pixels.height != height:
             self.pixels = self.pixels.thumbnail_image(
-                width, height=height, size=VIPSSize.FORCE
+                width,
+                height=height,
+                size=VIPSSize.FORCE,
             )
         return self
 
@@ -254,7 +293,7 @@ class VipsImagePixels(ImagePixelsImpl):
     def change_colorspace(self, colorspace: Colorspace) -> ImagePixelsImpl:
         new_colorspace = None
 
-        if self.pixels.format == 'uchar':
+        if self.pixels.format == "uchar":
             # As libvips makes a distinction between format and interpretation,
             # and due to our various libs usage, there is sometimes
             # inconsistencies. As a quick fix, force interpretation casting
@@ -262,19 +301,19 @@ class VipsImagePixels(ImagePixelsImpl):
             # Should be treated more efficiently.
             # Info: https://github.com/libvips/libvips/issues/580
             if self.pixels.interpretation == VIPSInterpretation.RGB16:
-                self.pixels = self.pixels.copy(
-                    interpretation=VIPSInterpretation.SRGB
-                )
+                self.pixels = self.pixels.copy(interpretation=VIPSInterpretation.SRGB)
             elif self.pixels.interpretation == VIPSInterpretation.GREY16:
-                self.pixels = self.pixels.copy(
-                    interpretation=VIPSInterpretation.B_W
-                )
+                self.pixels = self.pixels.copy(interpretation=VIPSInterpretation.B_W)
 
-        if (self.pixels.interpretation == VIPSInterpretation.RGB16
-                and colorspace == Colorspace.GRAY):
+        if (
+            self.pixels.interpretation == VIPSInterpretation.RGB16
+            and colorspace == Colorspace.GRAY
+        ):
             new_colorspace = VIPSInterpretation.GREY16
-        elif (self.pixels.interpretation == VIPSInterpretation.GREY16
-              and colorspace == Colorspace.COLOR):
+        elif (
+            self.pixels.interpretation == VIPSInterpretation.GREY16
+            and colorspace == Colorspace.COLOR
+        ):
             new_colorspace = VIPSInterpretation.RGB16
         elif colorspace == Colorspace.COLOR:
             new_colorspace = VIPSInterpretation.SRGB
@@ -287,13 +326,17 @@ class VipsImagePixels(ImagePixelsImpl):
 
     def int_clip(self) -> ImagePixelsImpl:
         format = self.pixels.format
-        if format in ('uchar', 'char'):
-            self.pixels = self.pixels.cast('uchar')
+        if format in ("uchar", "char"):
+            self.pixels = self.pixels.cast("uchar")
         else:
-            self.pixels = self.pixels.cast('ushort')
+            self.pixels = self.pixels.cast("ushort")
         return self
 
-    def add_transparency(self, bg_transparency, transparency_mask: np.ndarray) -> ImagePixelsImpl:
+    def add_transparency(
+        self,
+        bg_transparency,
+        transparency_mask: np.ndarray,
+    ) -> ImagePixelsImpl:
         mask_dtype = vips_format_to_dtype[self.pixels.format]
         transparency_mask = transparency_mask.astype(mask_dtype)
         self.pixels = self.pixels.bandjoin(numpy_to_vips(transparency_mask))
@@ -311,25 +354,25 @@ class VipsImagePixels(ImagePixelsImpl):
     def compress(self, format: OutputExtension, bitdepth: int, **params) -> bytes:
         clean_params = {}
         if format == OutputExtension.JPEG:
-            clean_params['Q'] = params.get(
-                'quality',
-                params.get('jpeg_quality', DEFAULT_JPEG_QUALITY)
+            clean_params["Q"] = params.get(
+                "quality",
+                params.get("jpeg_quality", DEFAULT_JPEG_QUALITY),
             )
-            clean_params['strip'] = True
+            clean_params["strip"] = True
         elif format == OutputExtension.PNG:
-            clean_params['compression'] = params.get(
-                'compression',
-                params.get('png_compression', DEFAULT_PNG_COMPRESSION)
+            clean_params["compression"] = params.get(
+                "compression",
+                params.get("png_compression", DEFAULT_PNG_COMPRESSION),
             )
         elif format == OutputExtension.WEBP:
-            clean_params['lossless'] = params.get(
-                'lossless',
-                params.get('webp_lossless', DEFAULT_WEBP_LOSSLESS)
+            clean_params["lossless"] = params.get(
+                "lossless",
+                params.get("webp_lossless", DEFAULT_WEBP_LOSSLESS),
             )
-            clean_params['strip'] = True
-            clean_params['Q'] = params.get(
-                'quality',
-                params.get('webp_quality', DEFAULT_WEBP_QUALITY)
+            clean_params["strip"] = True
+            clean_params["Q"] = params.get(
+                "quality",
+                params.get("webp_quality", DEFAULT_WEBP_QUALITY),
             )
 
         # Clip by casting image
@@ -349,11 +392,11 @@ class ImagePixels:
         self._impl = None  # noqa
 
         if not isinstance(pixels, ImagePixelsImpl):
-            if type(pixels) is VIPSImage:
+            if isinstance(pixels, VIPSImage):
                 pixels = VipsImagePixels(pixels)
-            elif type(pixels) is np.ndarray:
+            elif isinstance(pixels, np.ndarray):
                 pixels = NumpyImagePixels(pixels)
-            elif type(pixels) is PILImage:
+            elif isinstance(pixels, PILImage):
                 pixels = NumpyImagePixels(pil_to_numpy(pixels))
             else:
                 raise ValueError(f"{type(pixels)} is invalid")
@@ -385,25 +428,28 @@ class ImagePixels:
     def prepare_channels(self, required_indexes: List[int]) -> ImagePixels:
         self._impl.prepare_channels(required_indexes)
         return self
-    
+
     def apply_lut(self, lut: LookUpTable) -> ImagePixels:
         self._impl.apply_lut(lut)
         return self
 
     def apply_lut_stack(
-        self, lut_stack: StackedLookUpTables, reduction: ChannelReduction, is_rgb: bool
+        self,
+        lut_stack: StackedLookUpTables,
+        reduction: ChannelReduction,
+        is_rgb: bool,
     ) -> ImagePixels:
         self._impl.apply_lut_stack(lut_stack, reduction, is_rgb)
         return self
-    
+
     def resize(self, width: int, height: int) -> ImagePixels:
         self._impl.resize(width, height)
         return self
-    
+
     def channel_reduction(self, reduction: ChannelReduction) -> ImagePixels:
         self._impl.channel_reduction(reduction)
         return self
-    
+
     def change_colorspace(self, colorspace: Colorspace) -> ImagePixels:
         self._impl.change_colorspace(colorspace)
         return self
@@ -411,11 +457,11 @@ class ImagePixels:
     def int_clip(self) -> ImagePixels:
         self._impl.int_clip()
         return self
-    
+
     def add_transparency(self, transparency_mask: np.ndarray) -> ImagePixels:
         self._impl.add_transparency(100, transparency_mask)
         return self
-    
+
     def draw_on(self, draw: np.ndarray, condition_mask: np.ndarray) -> ImagePixels:
         self._impl.draw_on(draw, condition_mask)
         return self
@@ -423,6 +469,11 @@ class ImagePixels:
     def apply_filter(self, im_filter: AbstractFilter) -> ImagePixels:
         self._impl.apply_filter(im_filter)
         return self
-    
-    def compress(self, format: OutputExtension, bitdepth: int, **format_params) -> bytes:
+
+    def compress(
+        self,
+        format: OutputExtension,
+        bitdepth: int,
+        **format_params,
+    ) -> bytes:
         return self._impl.compress(format, bitdepth, **format_params)

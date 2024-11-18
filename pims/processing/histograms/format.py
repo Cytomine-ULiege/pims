@@ -11,14 +11,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
+
+# pylint: disable=unused-argument
 
 from abc import ABC
 from typing import List, Tuple, Union
 
 import numpy as np
-import zarr as zarr
-from zarr.errors import _BaseZarrError as ZarrError  # noqa
+import zarr
+from zarr.errors import _BaseZarrError as ZarrError
 
 from pims.api.utils.models import HistogramType
 from pims.cache import cached_property
@@ -39,7 +40,7 @@ class HistogramFormat(HistogramReaderInterface, ABC):
         self.path = path
 
     @classmethod
-    def match(cls, path: Path, *args, **kwargs) -> Union[bool, HistogramFormat]:
+    def match(cls, path: Path, *args, **kwargs) -> Union[bool, "HistogramFormat"]:
         return False
 
 
@@ -48,17 +49,19 @@ class ZarrHistogramFormat(HistogramFormat):
         super().__init__(path)
         self.__dict__.update(kwargs)
 
-        if not hasattr(self, 'zhf'):
-            self.zhf = zarr.open(str(self.path), mode='r')
+        if not hasattr(self, "zhf"):
+            self.zhf = zarr.open(str(self.path), mode="r")
 
     @classmethod
     def match(cls, path: Path, *args, **kwargs) -> Union[bool, HistogramFormat]:
         try:
-            zhf = zarr.open(str(path), mode='r')
+            zhf = zarr.open(str(path), mode="r")
             if ZHF_ATTR_FORMAT in zhf.attrs:
                 return cls(path, zhf=zhf)
         except ZarrError:
             return False
+
+        return False
 
     @cached_property
     def per_planes(self) -> bool:
@@ -94,15 +97,14 @@ class ZarrHistogramFormat(HistogramFormat):
             return self.image_bounds()
         return tuple(self.zhf[f"{ZHF_PER_CHANNEL}/{ZHF_BOUNDS}"][c])
 
-    def channel_histogram(
-        self, c: PlaneIndex, squeeze: bool = True
-    ) -> np.ndarray:
+    def channel_histogram(self, c: PlaneIndex, squeeze: bool = True) -> np.ndarray:
         if not self.per_channels:
             return self.image_histogram()
 
-        if type(c) is list:
-            hist = self.zhf[f"{ZHF_PER_CHANNEL}/{ZHF_HIST}"]\
-                .get_orthogonal_selection((c,))
+        if isinstance(c, list):
+            hist = self.zhf[f"{ZHF_PER_CHANNEL}/{ZHF_HIST}"].get_orthogonal_selection(
+                (c,)
+            )
             return np.squeeze(hist) if squeeze else hist
 
         hist = self.zhf[f"{ZHF_PER_CHANNEL}/{ZHF_HIST}"][c]
@@ -111,9 +113,9 @@ class ZarrHistogramFormat(HistogramFormat):
     def planes_bounds(self) -> List[Tuple[int, int]]:
         if not self.per_planes:
             return self.channels_bounds()
-        return list(map(
-            tuple, self.zhf[f"{ZHF_PER_PLANE}/{ZHF_BOUNDS}"].reshape((-1, 2))
-        ))
+        return list(
+            map(tuple, self.zhf[f"{ZHF_PER_PLANE}/{ZHF_BOUNDS}"].reshape((-1, 2)))
+        )
 
     def plane_bounds(self, c: int, z: int, t: int) -> Tuple[int, int]:
         if not self.per_planes:
@@ -121,17 +123,22 @@ class ZarrHistogramFormat(HistogramFormat):
         return tuple(self.zhf[f"{ZHF_PER_PLANE}/{ZHF_BOUNDS}"][t, z, c])
 
     def plane_histogram(
-        self, c: PlaneIndex, z: PlaneIndex, t: PlaneIndex, squeeze: bool = True
+        self,
+        c: PlaneIndex,
+        z: PlaneIndex,
+        t: PlaneIndex,
+        squeeze: bool = True,
     ) -> np.ndarray:
         if not self.per_planes:
             return self.channel_histogram(c)
 
-        if type(c) is list or type(z) is list or type(t) is list:
-            c = c if type(c) is list else [c]
-            z = z if type(z) is list else [z]
-            t = t if type(t) is list else [t]
-            hist = self.zhf[f"{ZHF_PER_PLANE}/{ZHF_HIST}"]\
-                .get_orthogonal_selection((t, z, c))
+        if isinstance(c, list) or isinstance(z, list) or isinstance(t, list):
+            c = c if isinstance(c, list) else [c]
+            z = z if isinstance(z, list) else [z]
+            t = t if isinstance(t, list) else [t]
+            hist = self.zhf[f"{ZHF_PER_PLANE}/{ZHF_HIST}"].get_orthogonal_selection(
+                (t, z, c)
+            )
             return np.squeeze(hist) if squeeze else hist
 
         hist = self.zhf[f"{ZHF_PER_PLANE}/{ZHF_HIST}"][t, z, c]

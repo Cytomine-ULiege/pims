@@ -21,8 +21,10 @@ from shapely.geometry.base import BaseGeometry
 
 from pims.api.utils.models import PointCross
 from pims.processing.annotations import (
-    ParsedAnnotation, ParsedAnnotations, contour,
-    stretch_contour
+    ParsedAnnotation,
+    ParsedAnnotations,
+    contour,
+    stretch_contour,
 )
 from pims.utils.color import np_int2rgb
 from pims.utils.dtypes import dtype_to_bits
@@ -31,7 +33,9 @@ from pims.utils.math import max_intensity
 
 
 def transparency_mask(
-    mask: np.ndarray, bg_transparency: int, dtype: np.dtype
+    mask: np.ndarray,
+    bg_transparency: int,
+    dtype: np.dtype,
 ) -> np.ndarray:
     mi = max_intensity(dtype_to_bits(dtype))
     if mask.ndim == 3:
@@ -50,10 +54,10 @@ def draw_condition_mask(draw: np.ndarray, rgb_int_background: int) -> np.ndarray
     if draw.ndim == 3:
         bg = np_int2rgb(rgb_int_background)
         return np.all(draw == np.asarray(bg), axis=-1).astype(np.uint8)
-    else:
-        mask = np.ones_like(draw, dtype=np.uint8)
-        mask[draw != rgb_int_background] = 0
-        return mask
+
+    mask = np.ones_like(draw, dtype=np.uint8)
+    mask[draw != rgb_int_background] = 0
+    return mask
 
 
 def rescale_draw(draw: np.ndarray, dtype: np.dtype) -> np.ndarray:
@@ -73,6 +77,7 @@ def rasterize_mask(
     """
     Rasterize annotations to a mask.
     """
+
     def _to_shape(
         annot: ParsedAnnotation, is_grayscale: bool = True
     ) -> Tuple[BaseGeometry, int]:
@@ -90,17 +95,18 @@ def rasterize_mask(
         for annot in annots:
             yield _to_shape(annot, annots.is_fill_grayscale)
 
-    rasterized = rasterize(
-        shape_generator(), out_shape=out_shape, dtype=dtype
-    )
+    rasterized = rasterize(shape_generator(), out_shape=out_shape, dtype=dtype)
     if not annots.is_grayscale:
         return np_int2rgb(rasterized)
     return rasterized
 
 
 def rasterize_draw(
-    annots: ParsedAnnotations, affine: np.ndarray, out_width: int, out_height: int,
-    point_style: PointCross
+    annots: ParsedAnnotations,
+    affine: np.ndarray,
+    out_width: int,
+    out_height: int,
+    point_style: PointCross,
 ) -> Tuple[np.ndarray, int]:
     """
     Rasterize annotations contours.
@@ -115,13 +121,14 @@ def rasterize_draw(
     ) -> Tuple[BaseGeometry, int]:
         width = _contour_width(annot.stroke_width)
         geometry = stretch_contour(
-            affine_transform(
-                contour(annot.geometry, point_style=point_style),
-                affine
-            ), width=width
+            affine_transform(contour(annot.geometry, point_style=point_style), affine),
+            width=width,
         )
-        value = annot.stroke_color.as_rgb_tuple()[
-            0] if is_grayscale else annot.stroke_color.as_int()
+        value = (
+            annot.stroke_color.as_rgb_tuple()[0]
+            if is_grayscale
+            else annot.stroke_color.as_int()
+        )
         return geometry, value
 
     dtype = np.uint8 if annots.is_stroke_grayscale else np.uint32
@@ -130,9 +137,7 @@ def rasterize_draw(
         for annot in annots:
             if not annot.stroke_color:
                 continue
-            yield _to_shape(
-                annot, annots.is_stroke_grayscale
-            )
+            yield _to_shape(annot, annots.is_stroke_grayscale)
 
     def background_color() -> int:
         """
@@ -141,18 +146,20 @@ def rasterize_draw(
         """
         if annots.is_stroke_grayscale:
             values = [
-                a.stroke_color.as_rgb_tuple()[0]
-                for a in annots if a.stroke_color
+                a.stroke_color.as_rgb_tuple()[0] for a in annots if a.stroke_color
             ]
             return find_first_available_int(values, 0, 65536)
-        else:
-            values = [a.stroke_color.as_int() for a in annots if a.stroke_color]
-            return find_first_available_int(values, 0, 4294967296)
+
+        values = [a.stroke_color.as_int() for a in annots if a.stroke_color]
+        return find_first_available_int(values, 0, 4294967296)
 
     bg = background_color()
     try:
         rasterized = rasterize(
-            shape_generator(), out_shape=out_shape, dtype=dtype, fill=bg
+            shape_generator(),
+            out_shape=out_shape,
+            dtype=dtype,
+            fill=bg,
         )
     except ValueError:
         # No valid geometry objects found for rasterize

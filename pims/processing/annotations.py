@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from collections.abc import MutableSequence
 from math import floor
 from typing import Optional, Tuple
@@ -31,9 +32,12 @@ class ParsedAnnotation:
     """
 
     def __init__(
-        self, geometry: BaseGeometry, fill_color: Optional[Color] = None,
-        stroke_color: Optional[Color] = None, stroke_width: int = None,
-        point_envelope_length: float = 1
+        self,
+        geometry: BaseGeometry,
+        fill_color: Optional[Color] = None,
+        stroke_color: Optional[Color] = None,
+        stroke_width: int = None,
+        point_envelope_length: float = 1,
     ):
         self.geometry = geometry
         self.fill_color = fill_color
@@ -41,12 +45,14 @@ class ParsedAnnotation:
         self.stroke_width = stroke_width
 
         self.custom_bounds = None
-        if self.geometry.type == 'Point' and point_envelope_length is not None:
+        if self.geometry.type == "Point" and point_envelope_length is not None:
             pt = self.geometry
             length = point_envelope_length / 2
             self.custom_bounds = (
-                pt.x - length, pt.y - length,  # noqa
-                pt.x + length, pt.y + length  # noqa
+                pt.x - length,
+                pt.y - length,  # noqa
+                pt.x + length,
+                pt.y + length,  # noqa
             )
 
     @property
@@ -68,9 +74,7 @@ class ParsedAnnotation:
         that bounds the object.
         Ported from Shapely.
         """
-        return self.custom_bounds \
-            if self.custom_bounds \
-            else self.geometry.bounds
+        return self.custom_bounds if self.custom_bounds else self.geometry.bounds
 
     @property
     def region(self) -> Region:
@@ -78,16 +82,20 @@ class ParsedAnnotation:
         return Region(top, left, right - left, bottom - top)
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, ParsedAnnotation) \
-               and self.geometry.equals(other.geometry) \
-               and self.fill_color == other.fill_color \
-               and self.stroke_color == other.stroke_color \
-               and self.stroke_width == other.stroke_width
+        return (
+            isinstance(other, ParsedAnnotation)
+            and self.geometry.equals(other.geometry)
+            and self.fill_color == other.fill_color
+            and self.stroke_color == other.stroke_color
+            and self.stroke_width == other.stroke_width
+        )
 
     def __str__(self):
-        return f"Annotation {self.geometry.wkt} " \
-            f"| Fill: {self.fill_color} " \
+        return (
+            f"Annotation {self.geometry.wkt} "
+            f"| Fill: {self.fill_color} "
             f"| Stroke: {self.stroke_color}({self.stroke_width})"
+        )
 
 
 class ParsedAnnotations(MutableSequence):
@@ -148,7 +156,7 @@ class ParsedAnnotations(MutableSequence):
         return Region(top, left, right - left, bottom - top)
 
     def __str__(self):
-        return '/'.join([str(i) for i in self._data])
+        return "/".join([str(i) for i in self._data])
 
 
 def annotation_crop_affine_matrix(
@@ -167,7 +175,8 @@ def annotation_crop_affine_matrix(
 
 
 def contour(
-    geom: BaseGeometry, point_style: PointCross = PointCross.CROSS
+    geom: BaseGeometry,
+    point_style: PointCross = PointCross.CROSS,
 ) -> BaseGeometry:
     """
     Extract geometry's contour.
@@ -184,6 +193,7 @@ def contour(
     contour = shapely.geometry
         Contour
     """
+
     if isinstance(geom, Point):
         x, y = geom.x, geom.y
 
@@ -196,7 +206,8 @@ def contour(
 
         if point_style == PointCross.CIRCLE:
             return Point(x, y).buffer(6).boundary
-        elif point_style == PointCross.CROSSHAIR:
+
+        if point_style == PointCross.CROSSHAIR:
             circle = Point(x, y).buffer(6).boundary
             left_line = LineString([(x - 10, y), (x - 3, y)])
             right_line = LineString([(x + 3, y), (x + 10, y)])
@@ -205,7 +216,8 @@ def contour(
             return GeometryCollection(
                 [circle, left_line, right_line, top_line, bottom_line]
             )
-        elif point_style == PointCross.CROSS:
+
+        if point_style == PointCross.CROSS:
             horizontal = LineString([(x - 10, y), (x + 10, y)])
             vertical = LineString([(x, y - 10), (x, y + 10)])
             return GeometryCollection([horizontal, vertical])
@@ -226,8 +238,10 @@ def stretch_contour(geom: BaseGeometry, width: float = 1) -> BaseGeometry:
 
 
 def get_annotation_region(
-    in_image: Image, annots: ParsedAnnotations, context_factor: float = 1.0,
-    try_square: bool = False
+    in_image: Image,
+    annots: ParsedAnnotations,
+    context_factor: float = 1.0,
+    try_square: bool = False,
 ) -> Region:
     """
     Get the region describing the rectangular envelope of all
