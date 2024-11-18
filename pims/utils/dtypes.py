@@ -11,12 +11,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import numpy as np
 
 
 def dtype_to_bits(dtype) -> int:
     """Get number of bits for a dtype-like (Numpy or string datatype)."""
-    if type(dtype) is str:
+    if isinstance(dtype, str):
         dtype = np.dtype(dtype)
     return dtype.type(0).nbytes * 8
 
@@ -36,11 +37,12 @@ def bits_to_str_dtype(bits: int) -> str:
         Datatype (in string format) for given `bits`
     """
     if bits > 16:
-        return 'uint32'
-    elif bits > 8:
-        return 'uint16'
-    else:
-        return 'uint8'
+        return "uint32"
+
+    if bits > 8:
+        return "uint16"
+
+    return "uint8"
 
 
 def np_dtype(bits: int) -> np.dtype:

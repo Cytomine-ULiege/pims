@@ -37,6 +37,6 @@ def test_check_array_size():
 def test_ensure_list():
     assert ensure_list(3) == [3]
     assert ensure_list((2, 4)) == [(2, 4)]
-    assert ensure_list("a") == ['a']
+    assert ensure_list("a") == ["a"]
     assert ensure_list([2]) == [2]
     assert ensure_list(None) == []

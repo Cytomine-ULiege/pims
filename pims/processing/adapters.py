@@ -11,7 +11,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 from typing import Callable, Dict, Optional, Tuple, Type, Union
 
@@ -24,8 +23,9 @@ from pims.utils.vips import dtype_to_vips_format, vips_format_to_dtype
 
 def numpy_to_vips(
     np_array: np.ndarray,
-    width: Optional[int] = None, height: Optional[int] = None,
-    n_channels: Optional[int] = None
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    n_channels: Optional[int] = None,
 ) -> VIPSImage:
     """
     Convert a Numpy array to a VIPS image.
@@ -55,12 +55,13 @@ def numpy_to_vips(
     ValueError
         If it is impossible to convert provided array.
     """
-    if not np_array.flags['C_CONTIGUOUS']:
+    if not np_array.flags["C_CONTIGUOUS"]:
         np_array = np.ascontiguousarray(np_array)
 
     if np_array.ndim > 3:
         raise NotImplementedError
-    elif np_array.ndim > 1:
+
+    if np_array.ndim > 1:
         if np_array.ndim == 2:
             height_, width_ = np_array.shape
             n_channels_ = 1
@@ -76,9 +77,7 @@ def numpy_to_vips(
 
     flat = np_array.reshape(np_array.size)
     vips_format = dtype_to_vips_format[str(np_array.dtype)]
-    return VIPSImage.new_from_memory(
-        flat.data, width, height, n_channels, vips_format
-    )
+    return VIPSImage.new_from_memory(flat.data, width, height, n_channels, vips_format)
 
 
 def vips_to_numpy(vips_image: VIPSImage) -> np.ndarray:
@@ -99,7 +98,7 @@ def vips_to_numpy(vips_image: VIPSImage) -> np.ndarray:
     return np.ndarray(
         buffer=vips_image.write_to_memory(),
         dtype=vips_format_to_dtype[vips_image.format],
-        shape=[vips_image.height, vips_image.width, vips_image.bands]
+        shape=[vips_image.height, vips_image.width, vips_image.bands],
     )
 
 
@@ -191,12 +190,13 @@ imglib_adapters: Dict[Tuple[RawImagePixelsType, RawImagePixelsType], Callable] =
     (PILImage.Image, PILImage.Image): identity,
     (VIPSImage, np.ndarray): vips_to_numpy,
     (VIPSImage, PILImage.Image): vips_to_pil,
-    (VIPSImage, VIPSImage): identity
+    (VIPSImage, VIPSImage): identity,
 }
 
 
 def convert_to(
-    image: RawImagePixels, new_image_type: RawImagePixelsType
+    image: RawImagePixels,
+    new_image_type: RawImagePixelsType,
 ) -> RawImagePixels:
     """
     Convert a convertible image (pixels) to a new convertible image type.

@@ -12,13 +12,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=unused-argument
+
 from abc import ABC
 
 import numpy as np
 from scipy import linalg
 from skimage.color import (
-    bex_from_rgb, combine_stains, hdx_from_rgb, hed_from_rgb, rgb_from_bex,
-    rgb_from_hdx, rgb_from_hed, separate_stains
+    bex_from_rgb,
+    combine_stains,
+    hdx_from_rgb,
+    hed_from_rgb,
+    rgb_from_bex,
+    rgb_from_hdx,
+    rgb_from_hed,
+    separate_stains,
 )
 from skimage.util.dtype import _convert
 
@@ -52,10 +60,11 @@ class AbstractColorDeconvolutionFilter(AbstractFilter, ABC):
 
     @classmethod
     def identifier(cls):
-        return cls.__name__.replace('DeconvolutionFilter', '').replace('2', '-')
+        return cls.__name__.replace("DeconvolutionFilter", "").replace("2", "-")
 
 
 # H&E DAB deconvolution filters
+
 
 class HEDAB2HematoxylinDeconvolutionFilter(AbstractColorDeconvolutionFilter):
     def __init__(self):
@@ -102,6 +111,7 @@ class HEDAB2DABDeconvolutionFilter(AbstractColorDeconvolutionFilter):
 
 # Giemsa
 
+
 class Giemsa2MethylBlueDeconvolutionFilter(AbstractColorDeconvolutionFilter):
     def __init__(self):
         super().__init__()
@@ -129,6 +139,7 @@ class Giemsa2EosinDeconvolutionFilter(AbstractColorDeconvolutionFilter):
 
 
 # Hematoxylin & DAB
+
 
 class HDAB2HematoxylinDeconvolutionFilter(AbstractColorDeconvolutionFilter):
     def __init__(self):
@@ -168,9 +179,11 @@ class HDAB2DABDeconvolutionFilter(AbstractColorDeconvolutionFilter):
 
 # From https://github.com/fiji/Colour_Deconvolution/blob/master/src/main/resources/sc/fiji/colourDeconvolution/colourdeconvolution.txt#L2
 rgb_from_hex = np.array(
-    [[0.644211, 0.716556, 0.266844],
-     [0.092789, 0.954111, 0.283111],
-     [0.0, 0.0, 0.0]]
+    [
+        [0.644211, 0.716556, 0.266844],
+        [0.092789, 0.954111, 0.283111],
+        [0.0, 0.0, 0.0],
+    ]
 )
 rgb_from_hex[2, :] = np.cross(rgb_from_hex[0, :], rgb_from_hex[1, :])
 hex_from_rgb = linalg.inv(rgb_from_hex)
@@ -212,11 +225,7 @@ class HE2EosinDeconvolutionFilter(AbstractColorDeconvolutionFilter):
 
 # RGB substractive
 
-rgb_from_rgbsub = np.array(
-    [[0.0, 1.0, 1.0],
-     [1.0, 0.0, 1.0],
-     [1.0, 1.0, 0.0]]
-)
+rgb_from_rgbsub = np.array([[0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
 rgbsub_from_rgb = linalg.inv(rgb_from_rgbsub)
 
 
@@ -273,11 +282,7 @@ class RGB2BlueDeconvolutionFilter(AbstractColorDeconvolutionFilter):
 
 # CMY substractive
 
-rgb_from_cmy = np.array(
-    [[1.0, 0.0, 0.0],
-     [0.0, 1.0, 0.0],
-     [0.0, 0.0, 1.0]]
-)
+rgb_from_cmy = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
 cmy_from_rgb = linalg.inv(rgb_from_cmy)
 
 

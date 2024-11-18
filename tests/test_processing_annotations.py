@@ -14,7 +14,11 @@
 
 from shapely.geometry import box
 
-from pims.processing.annotations import ParsedAnnotation, ParsedAnnotations, get_annotation_region
+from pims.processing.annotations import (
+    ParsedAnnotation,
+    ParsedAnnotations,
+    get_annotation_region,
+)
 from pims.processing.region import Region
 from pims.utils.color import Color
 
@@ -65,21 +69,17 @@ def test_annotation_region():
 
     al = ParsedAnnotations()
     al.append(ParsedAnnotation(box(10, 20, 30, 40)))
-    assert get_annotation_region(
-        FakeImage(100, 100), al
-    ) == Region(20, 10, 20, 20)
-    assert get_annotation_region(
-        FakeImage(100, 100), al, context_factor=1.5
-    ) == Region(15, 5, 30, 30)
+    assert get_annotation_region(FakeImage(100, 100), al) == Region(20, 10, 20, 20)
+
+    actual = get_annotation_region(FakeImage(100, 100), al, context_factor=1.5)
+    assert actual == Region(15, 5, 30, 30)
 
     al = ParsedAnnotations()
     al.append(ParsedAnnotation(box(10, 20, 30, 30)))
-    assert get_annotation_region(
-        FakeImage(100, 100), al, try_square=True
-    ) == Region(15, 10, 20, 20)
+    actual = get_annotation_region(FakeImage(100, 100), al, try_square=True)
+    assert actual == Region(15, 10, 20, 20)
 
     al = ParsedAnnotations()
     al.append(ParsedAnnotation(box(20, 10, 30, 30)))
-    assert get_annotation_region(
-        FakeImage(100, 100), al, try_square=True
-    ) == Region(10, 15, 20, 20)
+    actual = get_annotation_region(FakeImage(100, 100), al, try_square=True)
+    assert actual == Region(10, 15, 20, 20)

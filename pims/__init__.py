@@ -17,6 +17,13 @@
 # KEEP ENCODING - so that __version__ can be read even if py2.7 is used.
 
 from .__version__ import (
-    __api_version__, __author__, __copyright__, __description__, __email__,
-    __license__, __title__, __url__, __version__
+    __api_version__,
+    __author__,
+    __copyright__,
+    __description__,
+    __email__,
+    __license__,
+    __title__,
+    __url__,
+    __version__,
 )

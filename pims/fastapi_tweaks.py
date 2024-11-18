@@ -11,6 +11,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: skip-file
+
 import asyncio
 import csv
 import email
@@ -18,8 +21,17 @@ import json
 from copy import deepcopy
 from enum import Enum
 from typing import (
-    Any, Callable, Coroutine, Dict, List, Mapping, Optional, Sequence, Tuple, Type,
-    Union
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
 )
 
 from fastapi import params, routing
@@ -38,7 +50,6 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from pims.api.utils.response import FastJsonResponse
-
 
 # Fast API tweaks
 
@@ -78,7 +89,7 @@ def request_params_to_args(
         ), "Params must be subclasses of Param"
 
         if utils.is_scalar_sequence_field(field) and isinstance(
-                received_params, (QueryParams, Headers)
+            received_params, (QueryParams, Headers)
         ):
             if isinstance(field_info, params.Query) and not query_explode:
                 value = received_params.get(field.alias)
@@ -224,6 +235,7 @@ def get_request_handler(
             return response
 
     return app
+
 
 ######
 

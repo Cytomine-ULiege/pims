@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from __future__ import annotations
 
 import os
@@ -18,18 +19,19 @@ import shutil
 from datetime import datetime
 from enum import Enum
 from pathlib import Path as _Path
-from typing import Callable, List, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Callable, List, Union
 
 from pims.cache import IMAGE_CACHE
 from pims.formats.utils.factories import (
-    FormatFactory, SpatialReadableFormatFactory,
-    SpectralReadableFormatFactory
+    FormatFactory,
+    SpatialReadableFormatFactory,
+    SpectralReadableFormatFactory,
 )
 from pims.utils.copy import SafelyCopiable
 
 if TYPE_CHECKING:
-    from pims.files.image import Image
     from pims.files.histogram import Histogram
+    from pims.files.image import Image
 
 PROCESSED_DIR = "processed"
 EXTRACTED_DIR = "extracted"
@@ -57,14 +59,14 @@ class FileRole(str, Enum):
     * `NONE` - This file has no defined role for PIMS.
     """
 
-    UPLOAD = 'UPLOAD'
-    ORIGINAL = 'ORIGINAL'
-    SPATIAL = 'SPATIAL'
-    SPECTRAL = 'SPECTRAL'
-    NONE = 'NONE'
+    UPLOAD = "UPLOAD"
+    ORIGINAL = "ORIGINAL"
+    SPATIAL = "SPATIAL"
+    SPECTRAL = "SPECTRAL"
+    NONE = "NONE"
 
     @classmethod
-    def from_path(cls, path: Path) -> FileRole:
+    def from_path(cls, path: Path) -> "FileRole":
         role = cls.NONE
         if path.has_original_role():
             role = cls.ORIGINAL
@@ -85,11 +87,11 @@ class FileType(str, Enum):
     processing.
     """
 
-    SINGLE = 'SINGLE'
-    COLLECTION = 'COLLECTION'
+    SINGLE = "SINGLE"
+    COLLECTION = "COLLECTION"
 
     @classmethod
-    def from_path(cls, path: Path) -> FileType:
+    def from_path(cls, path: Path) -> "FileType":
         if path.is_collection():
             return cls.COLLECTION
         return cls.SINGLE
@@ -143,7 +145,7 @@ class Path(PlatformPath, _Path, SafelyCopiable):
     def size(self) -> int:
         """Get file size, in bytes"""
         if self.is_dir():
-            return sum([it.size for it in self.iterdir() if os.access(it, os.R_OK)])
+            return sum(it.size for it in self.iterdir() if os.access(it, os.R_OK))
         if not self.is_file() and not self.is_dir():
             return 0
         return self.stat().st_size
@@ -158,7 +160,7 @@ class Path(PlatformPath, _Path, SafelyCopiable):
         >>> Path("/a/b/c.ext1.ext2").extension
         ".ext1.ext2"
         """
-        return ''.join(self.suffixes)
+        return "".join(self.suffixes)
 
     @property
     def true_stem(self) -> str:
@@ -171,7 +173,7 @@ class Path(PlatformPath, _Path, SafelyCopiable):
         >>> Path("/a/b/c.ext1.ext2").true_stem
         "c"
         """
-        return self.stem.split('.')[0]
+        return self.stem.split(".")[0]
 
     def mount_point(self) -> Union[Path, None]:
         for parent in self.parents:
@@ -246,7 +248,12 @@ class Path(PlatformPath, _Path, SafelyCopiable):
 
     def get_upload(self) -> Path:
         upload = next(
-            (child for child in self.upload_root().iterdir() if child.has_upload_role()), None
+            (
+                child
+                for child in self.upload_root().iterdir()
+                if child.has_upload_role()
+            ),
+            None,
         )
         return upload
 
@@ -255,11 +262,21 @@ class Path(PlatformPath, _Path, SafelyCopiable):
             return None
 
         original = next(
-            (child for child in self.processed_root().iterdir() if child.has_original_role()), None
+            (
+                child
+                for child in self.processed_root().iterdir()
+                if child.has_original_role()
+            ),
+            None,
         )
 
         from pims.files.image import Image
-        return Image(original, factory=FormatFactory(match_on_ext=True)) if original else None
+
+        return (
+            Image(original, factory=FormatFactory(match_on_ext=True))
+            if original
+            else None
+        )
 
     def get_spatial(self, cache=False) -> Union[Image, None]:
         processed_root = self.processed_root()
@@ -272,62 +289,84 @@ class Path(PlatformPath, _Path, SafelyCopiable):
             return cached
 
         spatial = next(
-            (child for child in self.processed_root().iterdir() if child.has_spatial_role()), None
+            (
+                child
+                for child in self.processed_root().iterdir()
+                if child.has_spatial_role()
+            ),
+            None,
         )
         if not spatial:
             return None
-        else:
-            from pims.files.image import Image
-            image = Image(
-                spatial, factory=SpatialReadableFormatFactory(match_on_ext=True)
-            )
-            if cache:
-                IMAGE_CACHE.put(cache_key, image)
-            return image
+
+        from pims.files.image import Image
+
+        image = Image(spatial, factory=SpatialReadableFormatFactory(match_on_ext=True))
+        if cache:
+            IMAGE_CACHE.put(cache_key, image)
+        return image
 
     def get_spectral(self) -> Union[Image, None]:
         if not self.processed_root().exists():
             return None
 
         spectral = next(
-            (child for child in self.processed_root().iterdir() if child.has_spectral_role()), None
+            (
+                child
+                for child in self.processed_root().iterdir()
+                if child.has_spectral_role()
+            ),
+            None,
         )
 
         from pims.files.image import Image
-        return Image(
-            spectral, factory=SpectralReadableFormatFactory(match_on_ext=True)
-        ) if spectral else None
+
+        return (
+            Image(spectral, factory=SpectralReadableFormatFactory(match_on_ext=True))
+            if spectral
+            else None
+        )
 
     def get_histogram(self) -> Union[Histogram, None]:
         if not self.processed_root().exists():
             return None
 
         histogram = next(
-            (child for child in self.processed_root().iterdir() if child.has_histogram_role()),
-            None
+            (
+                child
+                for child in self.processed_root().iterdir()
+                if child.has_histogram_role()
+            ),
+            None,
         )
 
         from pims.files.histogram import Histogram
+
         return Histogram(histogram) if histogram else None
 
     def get_representations(self) -> List[Path]:
         representations = [
-            self.get_upload(), self.get_original(), self.get_spatial(),
-            self.get_spectral()
+            self.get_upload(),
+            self.get_original(),
+            self.get_spatial(),
+            self.get_spectral(),
         ]
-        return [representation for representation in representations if representation is not None]
+        return [
+            representation
+            for representation in representations
+            if representation is not None
+        ]
 
     def get_representation(self, role: FileRole) -> Union[Path, None]:
         if role == FileRole.UPLOAD:
             return self.get_upload()
-        elif role == FileRole.ORIGINAL:
+        if role == FileRole.ORIGINAL:
             return self.get_original()
-        elif role == FileRole.SPATIAL:
+        if role == FileRole.SPATIAL:
             return self.get_spatial()
-        elif role == FileRole.SPECTRAL:
+        if role == FileRole.SPECTRAL:
             return self.get_spectral()
-        else:
-            return None
+        return None
 
     def get_extracted_children(self, stop_recursion_cond: Callable = None):
         if not self.is_collection():
@@ -366,7 +405,7 @@ class Path(PlatformPath, _Path, SafelyCopiable):
         """
         if not self.is_file():
             return bytearray()
-        with self.resolve().open('rb') as fp:
+        with self.resolve().open("rb") as fp:
             return bytearray(fp.read(_NUM_SIGNATURE_BYTES))
 
     @property
@@ -377,4 +416,3 @@ class Path(PlatformPath, _Path, SafelyCopiable):
         See `CachedDataPath` for technical details.
         """
         return self
-

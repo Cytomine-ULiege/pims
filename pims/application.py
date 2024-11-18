@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: skip-file
+
 import logging
 from . import __api_version__, __version__
 logger = logging.getLogger("pims.app")

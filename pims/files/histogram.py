@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import List, Tuple, Type
 
 import numpy as np
@@ -38,8 +39,8 @@ class Histogram(Path, HistogramReaderInterface):
 
         if _format is None:
             raise NoMatchingFormatProblem(self)
-        else:
-            self._format = _format
+
+        self._format = _format
 
     def type(self) -> HistogramType:
         return self._format.type()

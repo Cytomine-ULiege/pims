@@ -17,7 +17,12 @@ from functools import cached_property
 
 import numpy as np
 from pyvips import Image as VIPSImage
-from skimage.filters import threshold_isodata, threshold_minimum, threshold_otsu, threshold_yen
+from skimage.filters import (
+    threshold_isodata,
+    threshold_minimum,
+    threshold_otsu,
+    threshold_yen,
+)
 
 from pims.api.utils.models import Colorspace, FilterType
 from pims.filters import AbstractFilter
@@ -52,8 +57,8 @@ class AbstractGlobalThresholdFilter(AbstractGlobalFilter, ABC):
     def _vips_impl(self, img, *args, **kwargs):
         if self.white_objects:
             return img <= self.threshold
-        else:
-            return img > self.threshold
+
+        return img > self.threshold
 
     @classmethod
     def get_name(cls):

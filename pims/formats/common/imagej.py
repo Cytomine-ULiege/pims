@@ -11,6 +11,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=broad-exception-caught,protected-access
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Type
@@ -27,11 +30,17 @@ from pims.formats.utils.abstract import AbstractFormat, CachedDataPath
 from pims.formats.utils.convertor import AbstractConvertor
 from pims.formats.utils.engines.omexml import OmeXml
 from pims.formats.utils.engines.tifffile import (
-    TifffileChecker, TifffileParser, cached_tifffile,
-    remove_tiff_comments
+    TifffileChecker,
+    TifffileParser,
+    cached_tifffile,
+    remove_tiff_comments,
 )
 from pims.formats.utils.histogram import DefaultHistogramReader
-from pims.formats.utils.structures.metadata import ImageChannel, ImageMetadata, MetadataStore
+from pims.formats.utils.structures.metadata import (
+    ImageChannel,
+    ImageMetadata,
+    MetadataStore,
+)
 from pims.formats.utils.structures.planes import PlanesInfo
 from pims.utils.color import infer_channel_color
 from pims.utils.dtypes import dtype_to_bits
@@ -43,7 +52,7 @@ if TYPE_CHECKING:
 
 def cached_tifffile_baseline_series(format: AbstractFormat) -> TiffPageSeries:
     tf = cached_tifffile(format)
-    return format.get_cached('_tf_baseline_series', tf.series.__getitem__, 0)
+    return format.get_cached("_tf_baseline_series", tf.series.__getitem__, 0)
 
 
 class ImageJTiffChecker(TifffileChecker):
@@ -79,12 +88,12 @@ class ImageJTiffParser(TifffileParser):
         shape = baseline._shape_expanded  # noqa
 
         imd = ImageMetadata()
-        imd.width = shape[axes.index('X')]
-        imd.height = shape[axes.index('Y')]
-        imd.depth = shape[axes.index('Z')]
-        imd.duration = shape[axes.index('T')]
-        imd.n_concrete_channels = shape[axes.index('C')]
-        imd.n_samples = shape[axes.index('S')]
+        imd.width = shape[axes.index("X")]
+        imd.height = shape[axes.index("Y")]
+        imd.depth = shape[axes.index("Z")]
+        imd.duration = shape[axes.index("T")]
+        imd.n_concrete_channels = shape[axes.index("C")]
+        imd.n_samples = shape[axes.index("S")]
         # In the case we have unknown extra samples or alpha channel:
         if imd.n_samples not in (1, 3):
             if imd.n_samples > 3:
@@ -96,29 +105,27 @@ class ImageJTiffParser(TifffileParser):
         imd.significant_bits = dtype_to_bits(imd.pixel_type)
 
         for cc_idx in range(imd.n_concrete_channels):
-            colors = [infer_channel_color(
-                None,
-                cc_idx,
-                imd.n_concrete_channels
-            )] * imd.n_samples
+            colors = [
+                infer_channel_color(None, cc_idx, imd.n_concrete_channels)
+            ] * imd.n_samples
 
             if imd.n_samples == 3 and colors[0] is None:
-                colors = [
-                    infer_channel_color(None, i, 3)
-                    for i in range(imd.n_samples)
-                ]
+                colors = [infer_channel_color(None, i, 3) for i in range(imd.n_samples)]
 
             names = [None] * imd.n_samples
             if imd.n_samples == 1 and 2 <= imd.n_concrete_channels <= 3:
-                names = ['RGB'[cc_idx]]
+                names = ["RGB"[cc_idx]]
             elif imd.n_samples == 3:
-                names = ['R', 'G', 'B']
+                names = ["R", "G", "B"]
 
             for s in range(imd.n_samples):
-                imd.set_channel(ImageChannel(
-                    index=cc_idx * imd.n_samples + s,
-                    suggested_name=names[s], color=colors[s]
-                ))
+                imd.set_channel(
+                    ImageChannel(
+                        index=cc_idx * imd.n_samples + s,
+                        suggested_name=names[s],
+                        color=colors[s],
+                    )
+                )
 
         return imd
 
@@ -128,7 +135,7 @@ class ImageJTiffParser(TifffileParser):
 
         tags = self.baseline.tags
 
-        unit = imagej_metadata.get('unit', tags.valueof("ResolutionUnit"))
+        unit = imagej_metadata.get("unit", tags.valueof("ResolutionUnit"))
         imd.physical_size_x = self.parse_physical_size(
             tags.valueof("XResolution"), unit
         )
@@ -136,8 +143,7 @@ class ImageJTiffParser(TifffileParser):
             tags.valueof("YResolution"), unit
         )
         imd.physical_size_z = self.parse_physical_size(
-            parse_float(imagej_metadata.get('spacing')),
-            imagej_metadata.get('unit')
+            parse_float(imagej_metadata.get("spacing")), imagej_metadata.get("unit")
         )
 
         return imd
@@ -146,7 +152,7 @@ class ImageJTiffParser(TifffileParser):
         store = super().parse_raw_metadata()
 
         for key, value in self._parsed_imagej_metadata.items():
-            if key == 'LUTs':
+            if key == "LUTs":
                 value = str(value)
             store.set(key, value, namespace="IMAGEJ")
         return store
@@ -154,8 +160,7 @@ class ImageJTiffParser(TifffileParser):
     def parse_planes(self) -> PlanesInfo:
         imd = self.format.main_imd
         pi = PlanesInfo(
-            imd.n_concrete_channels, imd.depth, imd.duration,
-            ['page_index'], [np.int64]
+            imd.n_concrete_channels, imd.depth, imd.duration, ["page_index"], [np.int64]
         )
 
         # ImageJ's dimension order is TZCYXS
@@ -171,30 +176,37 @@ class ImageJTiffConvertor(AbstractConvertor):
     def convert(self, dest_path: Path) -> bool:
         imd = self.source.full_imd
         shape = (
-            imd.duration, imd.depth, imd.n_concrete_channels,
-            imd.height, imd.width, imd.n_samples
+            imd.duration,
+            imd.depth,
+            imd.n_concrete_channels,
+            imd.height,
+            imd.width,
+            imd.n_samples,
         )
         storedshape = (imd.n_planes, 1, 1, imd.height, imd.width, imd.n_samples)
-        axes = 'TZCYXS'
+        axes = "TZCYXS"
 
         ome = OmeXml()
         ome.addimage(imd, shape, storedshape, axes)
         omexml = str(ome)
 
-        vips_source = VIPSImage.new_from_file(
-            str(self.source.path), n=imd.n_planes
-        )
+        vips_source = VIPSImage.new_from_file(str(self.source.path), n=imd.n_planes)
         vips_source = vips_source.copy()
-        vips_source.set('image-description', omexml)
+        vips_source.set("image-description", omexml)
 
-        opts = dict()
+        opts = {}
         if imd.n_planes > 1:
-            opts['page_height'] = vips_source.get('page-height')
+            opts["page_height"] = vips_source.get("page-height")
 
         result = vips_source.tiffsave(
-            str(dest_path), pyramid=True, tile=True,
-            tile_width=256, tile_height=256, bigtiff=True,
-            properties=False, subifd=True,
+            str(dest_path),
+            pyramid=True,
+            tile=True,
+            tile_width=256,
+            tile_height=256,
+            bigtiff=True,
+            properties=False,
+            subifd=True,
             depth=pyvips.enums.ForeignDzDepth.ONETILE,
             compression=pyvips.enums.ForeignTiffCompression.LZW,
             region_shrink=pyvips.enums.RegionShrink.MEAN,
@@ -207,7 +219,7 @@ class ImageJTiffConvertor(AbstractConvertor):
         if ok:
             try:
                 remove_tiff_comments(dest_path, imd.n_planes, except_pages=[0])
-            except Exception: # noqa
+            except Exception:  # noqa
                 pass
         return ok
 
@@ -224,6 +236,7 @@ class ImageJTiffFormat(PlanarTiffFormat):
     * Not sure on behavior for truncated stacks.
 
     """
+
     checker_class = ImageJTiffChecker
     parser_class = ImageJTiffParser
     reader_class = OmeTiffReader

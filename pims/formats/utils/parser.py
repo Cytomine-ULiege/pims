@@ -11,10 +11,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from pims.formats.utils.structures.annotations import ParsedMetadataAnnotation
 from pims.formats.utils.structures.metadata import ImageMetadata, MetadataStore
@@ -57,7 +58,6 @@ class AbstractParser(ABC):
         It is allowed to parse more metadata in this method if it does not
         introduce overhead.
         """
-        pass
 
     @abstractmethod
     def parse_known_metadata(self) -> ImageMetadata:

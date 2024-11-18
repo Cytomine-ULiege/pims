@@ -11,6 +11,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=unused-argument
+
 import os
 
 import pytest
@@ -21,7 +24,8 @@ from pims.files.file import Path
 
 @pytest.mark.parametrize("filepath", ("/abc", "abc", "abc/foo"))
 def test_filepath2path(app, settings, filepath):
-    assert str(filepath2path(filepath, settings)) == os.path.join(settings.root, filepath)
+    actual = str(filepath2path(filepath, settings))
+    assert actual == os.path.join(settings.root, filepath)
 
 
 @pytest.mark.parametrize("rootpath", ("/abc", "abc", "abc/foo/"))

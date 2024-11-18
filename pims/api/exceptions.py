@@ -20,6 +20,7 @@ from pims.api.utils.parameter import path2filepath
 
 def clean_filepath(filepath):
     from pims.config import get_settings
+
     return path2filepath(filepath, config=get_settings())
 
 
@@ -54,24 +55,18 @@ class AuthenticationException(ProblemException):
 def add_problem_exception_handler(app: FastAPI):
     @app.exception_handler(ProblemException)
     def problem_exception_handler(request: Request, exc: ProblemException):
-        content = {
-            "title": exc.title,
-            "details": exc.detail
-        }
+        content = {"title": exc.title, "details": exc.detail}
         if exc.ext:
             content.update(exc.ext)
 
-        return JSONResponse(
-            status_code=exc.status,
-            content=content
-        )
+        return JSONResponse(status_code=exc.status, content=content)
 
 
 class FilepathNotFoundProblem(NotFoundException):
     def __init__(self, filepath):
         filepath = clean_filepath(filepath)
-        title = 'Filepath not found'
-        detail = f'The filepath {filepath} does not exist.'
+        title = "Filepath not found"
+        detail = f"The filepath {filepath} does not exist."
         super().__init__(title, detail)
 
 
@@ -79,10 +74,10 @@ class NoAppropriateRepresentationProblem(NotFoundException):
     def __init__(self, filepath, representation=None):
         filepath = clean_filepath(filepath)
 
-        title = 'No appropriate representation found'
-        detail = f'The filepath {filepath} does not have an appropriate representation'
+        title = "No appropriate representation found"
+        detail = f"The filepath {filepath} does not have an appropriate representation"
         if representation:
-            detail += f' (expected {representation})'
+            detail += f" (expected {representation})"
         super().__init__(title, detail, representation=representation)
 
 
@@ -90,8 +85,8 @@ class NotADirectoryProblem(BadRequestException):
     def __init__(self, filepath):
         filepath = clean_filepath(filepath)
 
-        title = 'Not a directory'
-        detail = f'The filepath {filepath} is not a directory'
+        title = "Not a directory"
+        detail = f"The filepath {filepath} is not a directory"
         super().__init__(title, detail)
 
 
@@ -99,8 +94,8 @@ class NotAFileProblem(BadRequestException):
     def __init__(self, filepath):
         filepath = clean_filepath(filepath)
 
-        title = 'Not a file'
-        detail = f'The filepath {filepath} is not a file'
+        title = "Not a file"
+        detail = f"The filepath {filepath} is not a file"
         super().__init__(title, detail)
 
 
@@ -109,7 +104,9 @@ class NoMatchingFormatProblem(BadRequestException):
         filepath = clean_filepath(filepath)
 
         title = "No matching format found"
-        detail = f"The filepath {filepath} is recognized by any of the available formats."
+        detail = (
+            f"The filepath {filepath} is recognized by any of the available formats."
+        )
         super().__init__(title, detail)
 
 
@@ -133,64 +130,59 @@ class PyramidParsingProblem(BadRequestException):
 
 class FormatNotFoundProblem(NotFoundException):
     def __init__(self, format_id):
-        title = 'Format not found'
-        detail = f'The format {format_id} does not exist.'
+        title = "Format not found"
+        detail = f"The format {format_id} does not exist."
         super().__init__(title, detail)
 
 
 class FilterNotFoundProblem(NotFoundException):
     def __init__(self, format_id):
-        title = 'Filter not found'
-        detail = f'The filter {format_id} does not exist.'
+        title = "Filter not found"
+        detail = f"The filter {format_id} does not exist."
         super().__init__(title, detail)
 
 
 class ColormapNotFoundProblem(NotFoundException):
     def __init__(self, colormap_id):
-        title = 'Colormap not found'
-        detail = f'The colormap {colormap_id} does not exist.'
+        title = "Colormap not found"
+        detail = f"The colormap {colormap_id} does not exist."
         super().__init__(title, detail)
 
 
 class NoAcceptableResponseMimetypeProblem(NotAcceptableException):
     def __init__(self, accept_header, supported_mimetypes):
-        title = 'No acceptable response mime type'
-        detail = 'There is no acceptable response mime type in Accept header.'
+        title = "No acceptable response mime type"
+        detail = "There is no acceptable response mime type in Accept header."
         ext = {
-            'accept_header': accept_header,
-            'supported_mimetypes': supported_mimetypes
+            "accept_header": accept_header,
+            "supported_mimetypes": supported_mimetypes,
         }
         super().__init__(title, detail, **ext)
 
 
 class TooLargeOutputProblem(BadRequestException):
     def __init__(self, width, height, max_size):
-        title = 'Too large image output dimensions.'
-        detail = 'Requested output dimensions exceed maximum admissible size. ' \
-                 'The request has been rejected as X-Image-Size-Safety header is set to ' \
-                 'SAFE_REJECT. '
-        ext = {
-            "request_width": width,
-            "request_height": height,
-            "max_size": max_size
-        }
+        title = "Too large image output dimensions."
+        detail = (
+            "Requested output dimensions exceed maximum admissible size. "
+            "The request has been rejected as X-Image-Size-Safety header is set to "
+            "SAFE_REJECT. "
+        )
+        ext = {"request_width": width, "request_height": height, "max_size": max_size}
         super().__init__(title, detail, **ext)
 
 
 class CytomineProblem(BadRequestException):
     def __init__(self, detail):
-        title = 'Cytomine core communication error'
+        title = "Cytomine core communication error"
         super().__init__(title, detail)
 
 
 class InvalidGeometryException(BadRequestException):
     def __init__(self, geometry: str, reason: str):
-        title = 'Invalid geometry'
-        detail = f'Geometry {geometry} is invalid.'
-        ext = {
-            "geometry": geometry,
-            "reason": reason
-        }
+        title = "Invalid geometry"
+        detail = f"Geometry {geometry} is invalid."
+        ext = {"geometry": geometry, "reason": reason}
         super().__init__(title, detail, **ext)
 
 

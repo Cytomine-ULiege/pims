@@ -16,8 +16,11 @@ import datetime
 import json
 
 from pims.formats.utils.structures.metadata import (
-    ImageChannel, ImageMetadata, Metadata, MetadataStore,
-    MetadataType
+    ImageChannel,
+    ImageMetadata,
+    Metadata,
+    MetadataStore,
+    MetadataType,
 )
 
 
@@ -39,8 +42,7 @@ def test_metadata():
         (MetadataType.JSON, json.loads('{"a":2}')),
         (MetadataType.DATETIME, datetime.datetime.now()),
         (MetadataType.DATE, datetime.date(2020, 1, 1)),
-        (MetadataType.TIME, datetime.time(10, 30, 3))
-
+        (MetadataType.TIME, datetime.time(10, 30, 3)),
     ]
 
     for item in data:
@@ -79,7 +81,7 @@ def test_metadatastore():
 
     ms = MetadataStore()
     ms.set("test.a", 2)
-    d = dict(TEST=dict(a=Metadata("a", 2, "test")))
+    d = {"TEST": {"a": Metadata("a", 2, "test")}}
     assert str(ms) == str(d)
     assert repr(ms) == str(d)
     assert next(iter(ms)) == next(iter(d))

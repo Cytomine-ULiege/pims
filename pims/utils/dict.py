@@ -30,13 +30,13 @@ def get_first(d: dict, keys: List[Any], default: Any = None) -> Any:
 
 def invert(d: dict) -> dict:
     """Invert keys and values in a dictionary"""
-    return {
-        v: k for k, v in d.items()
-    }
+    return {v: k for k, v in d.items()}
 
 
 def flatten(
-    d: Union[dict, collections.abc.MutableMapping], parent_key='', sep='.'
+    d: Union[dict, collections.abc.MutableMapping],
+    parent_key="",
+    sep=".",
 ) -> dict:
     """
     Deeply flatten a dictionary.
@@ -45,7 +45,7 @@ def flatten(
     items = []
     for k, v in d.items():
         if parent_key:
-            if k.startswith('['):
+            if k.startswith("["):
                 new_key = parent_key + k
             else:
                 new_key = parent_key + sep + k

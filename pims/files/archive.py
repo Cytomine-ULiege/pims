@@ -14,17 +14,8 @@
 
 import shutil
 import sys
-
-# Importing collections.abc objects from collections is deprecated
-# since python 3.3. 
-from sys import version_info
 import zipfile
-if version_info.major < 3 or \
-        (version_info.major == 3 and version_info.minor < 3):
-    from collections import Callable
-else:
-    from collections.abc import Callable
-
+from collections.abc import Callable
 from functools import lru_cache
 from typing import List, Optional
 from zipfile import ZipFile
@@ -56,45 +47,54 @@ class ArchiveFormat:
 
 
 def zip_match(signature: bytearray) -> bool:
-    return (len(signature) > 3 and
-            signature[0] == 0x50 and signature[1] == 0x4B and
-            (signature[2] == 0x3 or signature[2] == 0x5 or
-             signature[2] == 0x7) and
-            (signature[3] == 0x4 or signature[3] == 0x6 or
-             signature[3] == 0x8))
+    return (
+        len(signature) > 3
+        and signature[0] == 0x50
+        and signature[1] == 0x4B
+        and (signature[2] == 0x3 or signature[2] == 0x5 or signature[2] == 0x7)
+        and (signature[3] == 0x4 or signature[3] == 0x6 or signature[3] == 0x8)
+    )
 
 
 def tar_match(signature: bytearray) -> bool:
-    return (len(signature) > 261 and
-            signature[257] == 0x75 and
-            signature[258] == 0x73 and
-            signature[259] == 0x74 and
-            signature[260] == 0x61 and
-            signature[261] == 0x72)
+    return (
+        len(signature) > 261
+        and signature[257] == 0x75
+        and signature[258] == 0x73
+        and signature[259] == 0x74
+        and signature[260] == 0x61
+        and signature[261] == 0x72
+    )
 
 
 def gztar_match(signature: bytearray) -> bool:
-    return (len(signature) > 2 and
-            signature[0] == 0x1F and
-            signature[1] == 0x8B and
-            signature[2] == 0x8)
+    return (
+        len(signature) > 2
+        and signature[0] == 0x1F
+        and signature[1] == 0x8B
+        and signature[2] == 0x8
+    )
 
 
 def bztar_match(signature: bytearray) -> bool:
-    return (len(signature) > 2 and
-            signature[0] == 0x42 and
-            signature[1] == 0x5A and
-            signature[2] == 0x68)
+    return (
+        len(signature) > 2
+        and signature[0] == 0x42
+        and signature[1] == 0x5A
+        and signature[2] == 0x68
+    )
 
 
 def xztar_match(signature: bytearray) -> bool:
-    return (len(signature) > 5 and
-            signature[0] == 0xFD and
-            signature[1] == 0x37 and
-            signature[2] == 0x7A and
-            signature[3] == 0x58 and
-            signature[4] == 0x5A and
-            signature[5] == 0x00)
+    return (
+        len(signature) > 5
+        and signature[0] == 0xFD
+        and signature[1] == 0x37
+        and signature[2] == 0x7A
+        and signature[3] == 0x58
+        and signature[4] == 0x5A
+        and signature[5] == 0x00
+    )
 
 
 @lru_cache
@@ -128,8 +128,8 @@ class Archive(Path):
 
         if _format is None:
             raise NoMatchingFormatProblem(self)
-        else:
-            self._format = _format
+
+        self._format = _format
 
     def extract(self, path: Path, clean: bool = True):
         """
@@ -150,19 +150,20 @@ class Archive(Path):
             )
 
         try:
-            # shutil.unpack_archive function (prior to python 3.9) performs archive unpacking in memory causing
+            # shutil.unpack_archive function (prior to python 3.9)
+            # performs archive unpacking in memory causing
             # high RAM memory usage for large ZIP archive extraction so need to use another library
             # see /pims-ce/-/issues/89
             if self._format.name.lower == "zip":
-                with zipfile.ZipFile(self.absolute(), 'r') as zip_ref:
+                with zipfile.ZipFile(self.absolute(), "r") as zip_ref:
                     zip_ref.extractall(path)
             else:
                 shutil.unpack_archive(self.absolute(), path, self._format.name)
         except shutil.ReadError as e:
-            raise ArchiveError(str(e))
+            raise ArchiveError(str(e)) from e
 
         if clean:
-            bad_filenames = ['.DS_STORE', '__MACOSX']
+            bad_filenames = [".DS_STORE", "__MACOSX"]
             for bad_filename in bad_filenames:
                 for bad_path in path.rglob(bad_filename):
                     bad_path.unlink(missing_ok=True)
@@ -186,6 +187,7 @@ def make_zip_archive(archive_path: Path, content_path: Path) -> ZipFile:
 
     Note: cannot use `shutil` to write archives as it is not thread safe !
     """
+
     def walk(path):
         for p in Path(path).iterdir():
             if p.is_dir():
@@ -193,7 +195,7 @@ def make_zip_archive(archive_path: Path, content_path: Path) -> ZipFile:
                 continue
             yield p.resolve()
 
-    with ZipFile(archive_path, 'w') as zipf:
+    with ZipFile(archive_path, "w") as zipf:
         for file in walk(content_path):
             zipf.write(file, file.relative_to(content_path))
 

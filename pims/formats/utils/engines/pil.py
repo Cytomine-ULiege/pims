@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 from typing import Optional
 
@@ -23,7 +24,11 @@ from pims.formats.utils.engines.exiftool import ExifToolParser
 from pims.formats.utils.engines.vips import VipsSpatialConvertor
 from pims.formats.utils.parser import AbstractParser
 from pims.formats.utils.reader import AbstractReader
-from pims.formats.utils.structures.metadata import ImageChannel, ImageMetadata, MetadataStore
+from pims.formats.utils.structures.metadata import (
+    ImageChannel,
+    ImageMetadata,
+    MetadataStore,
+)
 from pims.processing.adapters import pil_to_vips
 from pims.processing.region import Region
 
@@ -34,13 +39,14 @@ def cached_pillow_file(
     format: AbstractFormat, pil_format_slug: Optional[str]
 ) -> PILImage:
     slugs = [pil_format_slug] if pil_format_slug else None
-    return format.get_cached('_pil', PILImage.open, format.path, formats=slugs)
+    return format.get_cached("_pil", PILImage.open, format.path, formats=slugs)
 
 
 def cached_palette_converted_pillow_file(
     format: AbstractFormat, pil_format_slug: Optional[str]
 ) -> PILImage:
     """Palette converted pillow image"""
+
     def _open_palette_converted(_format, _pil_format_slug):
         image = cached_pillow_file(format, pil_format_slug)
         palette = getattr(image, "palette", None)
@@ -49,8 +55,7 @@ def cached_palette_converted_pillow_file(
         return image
 
     return format.get_cached(
-        '_pil_palette_converted', _open_palette_converted,
-        format.path, pil_format_slug
+        "_pil_palette_converted", _open_palette_converted, format.path, pil_format_slug
     )
 
 
@@ -78,7 +83,7 @@ class PillowParser(ExifToolParser, AbstractParser):
                 imd.set_channel(ImageChannel(index=i, suggested_name=name))
         else:
             # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#bmp
-            log.error(f"{self.format.path}: Mode {mode} is not supported.")
+            log.error("%s: Mode %s is not supported.", self.format.path, mode)
             raise MetadataParsingProblem(self.format.path)
 
         return imd
@@ -96,24 +101,20 @@ class SimplePillowReader(AbstractReader):
     FORMAT_SLUG = None
 
     def read_thumb(
-        self, out_width, out_height, precomputed=None,
-        c=None, z=None, t=None
+        self, out_width, out_height, precomputed=None, c=None, z=None, t=None
     ):
         image = cached_pillow_file(self.format, self.FORMAT_SLUG)
 
         # We do not use Pillow resize() method as resize will be better handled
         # by vips in response generation.
         return self.read_window(
-            Region(0, 0, image.width, image.height),
-            out_width, out_height, c, z, t
+            Region(0, 0, image.width, image.height), out_width, out_height, c, z, t
         )
 
     def read_window(self, region, out_width, out_height, c=None, z=None, t=None):
         image = cached_palette_converted_pillow_file(self.format, self.FORMAT_SLUG)
         region = region.scale_to_tier(self.format.pyramid.base)
-        return image.crop(
-            (region.left, region.top, region.right, region.bottom)
-        )
+        return image.crop((region.left, region.top, region.right, region.bottom))
 
     def read_tile(self, tile, c=None, z=None, t=None):
         return self.read_window(tile, int(tile.width), int(tile.height), c, z, t)

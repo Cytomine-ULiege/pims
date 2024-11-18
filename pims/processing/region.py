@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from __future__ import annotations
 
 import math
@@ -31,10 +32,14 @@ class Region:
     >>> Region(0, 0, 100, 100, 1.0) == Region(0, 0, 50, 50, 2.0)
     True
     """
+
     def __init__(
         self,
-        top: float, left: float, width: float, height: float,
-        downsample: Union[Tuple[float, float], float] = 1.0
+        top: float,
+        left: float,
+        width: float,
+        height: float,
+        downsample: Union[Tuple[float, float], float] = 1.0,
     ):
         self.top = top
         self.left = left
@@ -79,7 +84,7 @@ class Region:
         """Region height at full resolution"""
         return self.height * self.height_downsample
 
-    def scale(self, downsample: Union[Tuple[float, float], float]) -> Region:
+    def scale(self, downsample: Union[Tuple[float, float], float]) -> "Region":
         """
         Scale the region in-place at a new downsample.
 
@@ -106,7 +111,7 @@ class Region:
         self.height_downsample = height_downsample
         return self
 
-    def discretize(self) -> Region:
+    def discretize(self) -> "Region":
         """
         Discretize (transform float coordinates to integers) the region
         in-place.
@@ -122,7 +127,7 @@ class Region:
         self.height = math.ceil(self.height)
         return self
 
-    def clip(self, width: float, height: float) -> Region:
+    def clip(self, width: float, height: float) -> "Region":
         """
         Clip the region in-place so that it fits in a region <0,0,width,height>.
         """
@@ -132,38 +137,46 @@ class Region:
         self.height = min(self.top + self.height, height) - self.top
         return self
 
-    def scale_to_tier(self, tier: PyramidTier) -> Region:
+    def scale_to_tier(self, tier: PyramidTier) -> "Region":
         """
         Scale, discretize and clip the region in-place so that it is scaled
         for a given pyramid tier, and fits in it.
         """
-        return self.scale((tier.width_factor, tier.height_factor)) \
-            .discretize() \
+        return (
+            self.scale((tier.width_factor, tier.height_factor))
+            .discretize()
             .clip(tier.width, tier.height)
+        )
 
     def as_dict(self) -> dict:
         return {
-            'top': self.top,
-            'left': self.left,
-            'width': self.width,
-            'height': self.height,
-            'width_downsample': self.width_downsample,
-            'height_downsample': self.height_downsample
+            "top": self.top,
+            "left": self.left,
+            "width": self.width,
+            "height": self.height,
+            "width_downsample": self.width_downsample,
+            "height_downsample": self.height_downsample,
         }
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Region):
             scaled = other.scale(self.downsample)
-            return (self.top == scaled.top and self.left == scaled.left and
-                    self.width == scaled.width and self.height == scaled.height)
+            return (
+                self.top == scaled.top
+                and self.left == scaled.left
+                and self.width == scaled.width
+                and self.height == scaled.height
+            )
 
         return False
 
     def __repr__(self) -> str:
-        return f"Region @ downsample ({self.width_downsample}/{self.height_downsample}) " \
-               f"(Top: {self.top} / Bottom: {self.bottom} / " \
-               f"Left: {self.left} / Right: {self.right} / " \
-               f"Width: {self.width} / Height: {self.height}) "
+        return (
+            f"Region @ downsample ({self.width_downsample}/{self.height_downsample}) "
+            f"(Top: {self.top} / Bottom: {self.bottom} / "
+            f"Left: {self.left} / Right: {self.right} / "
+            f"Width: {self.width} / Height: {self.height}) "
+        )
 
 
 class Tile(Region):
@@ -185,8 +198,11 @@ class Tile(Region):
         width = tier.tile_width
         height = tier.tile_height
         super().__init__(
-            top, left, width, height,
-            downsample=(tier.width_factor, tier.height_factor)
+            top,
+            left,
+            width,
+            height,
+            downsample=(tier.width_factor, tier.height_factor),
         )
         self.tier = tier
         self.tx = tx

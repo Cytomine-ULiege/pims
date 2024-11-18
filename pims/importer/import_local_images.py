@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 import shutil
 import sys
@@ -23,26 +24,43 @@ logging.basicConfig()
 logger = logging.getLogger("upload")
 logger.setLevel(logging.INFO)
 
+
 def parse_boolean(value):
     value = value.lower()
     if value in ["true", "yes", "y", "1", "t"]:
         return True
-    elif value in ["false", "no", "n", "0", "f"]:
+    if value in ["false", "no", "n", "0", "f"]:
         return False
     return False
 
-# Run me with: CONFIG_FILE=/path/to/config.env python import_local_images.py --path /my/folder --copy True
-if __name__ == '__main__':
-    parser = ArgumentParser(prog="Import images sequentially to PIMS root from a local folder.")
-    parser.add_argument('--path', help="A directory with images to import, or an image path.")
-    parser.add_argument('--copy', dest="copy", required=False, type=parse_boolean, default=True,
-                        help="Specify if upload file is a real copy (True) of the original file or not (False). Real copy by default.")
+
+# Run me with:
+# CONFIG_FILE=/path/to/config.env python import_local_images.py --path /my/folder --copy True
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        prog="Import images sequentially to PIMS root from a local folder."
+    )
+    parser.add_argument(
+        "--path", help="A directory with images to import, or an image path."
+    )
+    parser.add_argument(
+        "--copy",
+        dest="copy",
+        required=False,
+        type=parse_boolean,
+        default=True,
+        help=(
+            "Specify if upload file is a real copy (True) of the original file or not (False). "
+            "Real copy by default."
+        ),
+    )
 
     params, _ = parser.parse_known_args(sys.argv[1:])
     path = Path(params.path)
 
     if not path.exists():
         from pims.api.exceptions import FilepathNotFoundProblem
+
         raise FilepathNotFoundProblem(f"File {path} not found")
 
     if path.is_file():
@@ -56,9 +74,8 @@ if __name__ == '__main__':
         if params.copy:
             shutil.copy(image_path, tmp_path)
         else:
-            tmp_path.symlink_to(image_path,target_is_directory=image_path.is_dir())
+            tmp_path.symlink_to(image_path, target_is_directory=image_path.is_dir())
         try:
             run_import(tmp_path, image_path.name, prefer_copy=False)
-        except Exception:  # noqa
+        except Exception:  # pylint: disable=broad-exception-caught
             tmp_path.unlink(missing_ok=True)
-        

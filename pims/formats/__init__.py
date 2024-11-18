@@ -12,20 +12,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from functools import partial
+import csv
 import logging
+import os
+from functools import partial
 from importlib import import_module
 from inspect import isabstract, isclass
 from pkgutil import iter_modules
-
 from types import ModuleType
 from typing import Dict, List, Type, Union
-from pims.config import get_settings
-import csv
-import os
 
 from importlib_metadata import EntryPoint, entry_points  # noqa
 
+from pims.config import get_settings
 from pims.formats.utils.abstract import AbstractFormat
 
 FORMAT_PLUGIN_PREFIX = "pims_format_"
@@ -41,7 +40,10 @@ def custom_sort_key(item, dictionary):
 
 
 def reorder_plugins(
-    plugin_list, csv_path, name_column="name", resolution_order_column="resolution_order"
+    plugin_list,
+    csv_path,
+    name_column="name",
+    resolution_order_column="resolution_order",
 ):
     plugin_resolution_orders = {}
 
@@ -49,7 +51,7 @@ def reorder_plugins(
         if name not in NON_PLUGINS_MODULES:
             plugin_resolution_orders[name] = 0
 
-    with open(csv_path, "r") as file:
+    with open(csv_path, "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
 
         for row in reader:
@@ -58,7 +60,7 @@ def reorder_plugins(
 
             if plugin_name is not None and resolution_order is not None:
                 plugin_resolution_orders[plugin_name] = resolution_order
-                
+
     sorted_plugin_list = sorted(
         plugin_list, key=partial(custom_sort_key, dictionary=plugin_resolution_orders)
     )
@@ -93,14 +95,15 @@ def _discover_format_plugins() -> List[Union[str, EntryPoint]]:
     ]
     plugins += entry_points(group=PLUGIN_GROUP)
 
-    plugin_names = [p.module if type(p) is EntryPoint else p for p in plugins]
+    plugin_names = [p.module if isinstance(p, EntryPoint) else p for p in plugins]
 
     if os.path.isfile(get_settings().checker_resolution_file):
         plugins = reorder_plugins(plugins, get_settings().checker_resolution_file)
 
     logger.info(
-        f"[green bold]Format plugins: found {len(plugins)} plugin(s)[/] "
-        f"[yellow]({', '.join(plugin_names)})"
+        "[green bold]Format plugins: found %d plugin(s)[/] [yellow](%s)",
+        len(plugins),
+        ", ".join(plugin_names),
     )
     return plugins
 
@@ -119,7 +122,7 @@ def _find_formats_in_module(mod: ModuleType) -> List[Type[AbstractFormat]]:
     formats: list
         The format classes
     """
-    formats = list()
+    formats = []
     for _, name, _ in iter_modules(mod.__path__):
         submodule_name = f"{mod.__name__}.{name}"
         try:
@@ -135,12 +138,14 @@ def _find_formats_in_module(mod: ModuleType) -> List[Type[AbstractFormat]]:
                     format.init()
 
                     logger.info(
-                        f"[green] * [yellow]{format.get_identifier()} "
-                        f"- {format.get_name()}[/] imported."
+                        "[green] * [yellow]%s - %s[/] imported.",
+                        format.get_identifier(),
+                        format.get_name(),
                     )
         except ImportError as e:
             logger.error(
-                f"{submodule_name} submodule cannot be checked for " f"formats !",
+                "%s submodule cannot be checked for formats !",
+                submodule_name,
                 exc_info=e,
             )
     return formats
@@ -155,13 +160,14 @@ def _get_all_formats() -> List[Type[AbstractFormat]]:
     formats: list
         The format classes
     """
-    formats = list()
+    formats = []
     for plugin in FORMAT_PLUGINS:
-        entrypoint_plugin = type(plugin) is EntryPoint
+        entrypoint_plugin = isinstance(plugin, EntryPoint)
 
         module_name = plugin.module if entrypoint_plugin else plugin
         logger.info(
-            f"[green bold]Importing formats from " f"[yellow]{module_name}[/] plugin..."
+            "[green bold]Importing formats from [yellow]%s[/] plugin...",
+            module_name,
         )
 
         if entrypoint_plugin:

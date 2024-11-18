@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from enum import Enum
 from typing import Optional
 
@@ -22,7 +23,11 @@ DEFAULT_SAFE_MODE = get_settings().default_image_size_safety_mode
 DEFAULT_ANNOTATION_ORIGIN = get_settings().default_annotation_origin
 
 
-def serialize_header(value, style='simple', explode=False):  # noqa
+def serialize_header(
+    value,
+    style="simple",  # pylint: disable=unused-argument
+    explode=False,
+):
     """
     Serialize a header according to https://swagger.io/docs/specification/serialization/.
 
@@ -40,18 +45,22 @@ def serialize_header(value, style='simple', explode=False):  # noqa
     str
         Serialized header.
     """
-    if type(value) is list:
-        return ','.join([str(item) for item in value])
-    elif type(value) is dict:
-        sep = '=' if explode else ','
-        return ','.join(['{}{}{}'.format(k, sep, v) for k, v in value.items()])
-    else:
-        return str(value)
+    if isinstance(value, list):
+        return ",".join([str(item) for item in value])
+
+    if isinstance(value, dict):
+        sep = "=" if explode else ","
+        return ",".join([f"{k}{sep}{v}" for k, v in value.items()])
+
+    return str(value)
 
 
 def add_image_size_limit_header(
-    headers: dict, request_width: int, request_height: int, safe_width: int,
-    safe_height: int
+    headers: dict,
+    request_width: int,
+    request_height: int,
+    safe_width: int,
+    safe_height: int,
 ) -> dict:
     """
     Add X-Image-Size-Limit header to existing header dict if necessary.
@@ -77,13 +86,13 @@ def add_image_size_limit_header(
     ratio = safe_width / request_width
     if ratio != 1.0:
         header = {
-            'request_width': request_width,
-            'request_height': request_height,
-            'safe_width': safe_width,
-            'safe_height': safe_height,
-            'ratio': ratio
+            "request_width": request_width,
+            "request_height": request_height,
+            "safe_width": safe_width,
+            "safe_height": safe_height,
+            "ratio": ratio,
         }
-        headers['X-Image-Size-Limit'] = serialize_header(header, explode=True)
+        headers["X-Image-Size-Limit"] = serialize_header(header, explode=True)
 
     return headers
 
@@ -94,9 +103,7 @@ class SafeMode(str, Enum):
     UNSAFE = "UNSAFE"
 
 
-def accept_header(
-    accept: Optional[str] = Header(None, alias='Accept')
-):
+def accept_header(accept: Optional[str] = Header(None, alias="Accept")):
     return accept
 
 
@@ -105,15 +112,15 @@ def safe_mode_header(
         DEFAULT_SAFE_MODE,
         alias="X-Image-Size-Safety",
         description="This header provides hints about the way the server has to deal "
-                    "with too large image responses.\n"
-                    "* `SAFE_REJECT` - Reject too large image response and throw a `400 Bad "
-                    "Request`.\n "
-                    "* `SAFE_RESIZE` - Resize the image response to an acceptable image size. "
-                    "Information about the resize are returned in `X-Image-Size-Limit` header.\n"
-                    "* `UNSAFE` - **At your own risk!** Try to fulfill the request but can cause "
-                    "unintended side effects (unreadable response, server slow down, server "
-                    "failure, "
-                    "...). It should only be used in rare controlled situations."
+        "with too large image responses.\n"
+        "* `SAFE_REJECT` - Reject too large image response and throw a `400 Bad "
+        "Request`.\n "
+        "* `SAFE_RESIZE` - Resize the image response to an acceptable image size. "
+        "Information about the resize are returned in `X-Image-Size-Limit` header.\n"
+        "* `UNSAFE` - **At your own risk!** Try to fulfill the request but can cause "
+        "unintended side effects (unreadable response, server slow down, server "
+        "failure, "
+        "...). It should only be used in rare controlled situations.",
     )
 ):
     return safe_mode
@@ -128,8 +135,10 @@ def annotation_origin_header(
     annot_origin: AnnotationOrigin = Header(
         DEFAULT_ANNOTATION_ORIGIN,
         alias="X-Annotation-Origin",
-        description="This header give the origin coordinate system "
-                    "in which are described provided annotations."
+        description=(
+            "This header give the origin coordinate system "
+            "in which are described provided annotations."
+        ),
     )
 ):
     return annot_origin
@@ -153,7 +162,7 @@ class ImageAnnotationRequestHeaders(ImageRequestHeaders):
         self,
         accept: str = Depends(accept_header),
         safe_mode: SafeMode = Depends(safe_mode_header),
-        annot_origin: AnnotationOrigin = Depends(annotation_origin_header)
+        annot_origin: AnnotationOrigin = Depends(annotation_origin_header),
     ):
         super().__init__(accept, safe_mode)
         self.annot_origin = annot_origin

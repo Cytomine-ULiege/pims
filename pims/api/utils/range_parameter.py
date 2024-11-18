@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Any
 
 from pims.utils.types import is_int
@@ -33,8 +34,8 @@ def is_range(value: Any) -> bool:
     """
     if not isinstance(value, str):
         return False
-    split = [v.strip() for v in value.split(':')]
-    return len(split) == 2 and all([bound == '' or is_int(bound) for bound in split])
+    split = [v.strip() for v in value.split(":")]
+    return len(split) == 2 and all(bound == "" or is_int(bound) for bound in split)
 
 
 def parse_range(pims_range: Any, mini: int, maxi: int) -> range:
@@ -62,11 +63,11 @@ def parse_range(pims_range: Any, mini: int, maxi: int) -> range:
         If `pims_range` is not a PIMS range.
     """
     if not is_range(pims_range):
-        raise ValueError(f'Invalid literal for Range(): {pims_range}')
+        raise ValueError(f"Invalid literal for Range(): {pims_range}")
 
-    low, high = [v.strip() for v in pims_range.split(':')]
-    low = mini if low == '' else int(low)
-    high = maxi if high == '' else int(high)
+    low, high = [v.strip() for v in pims_range.split(":")]
+    low = mini if low == "" else int(low)
+    high = maxi if high == "" else int(high)
 
     low, high = min(low, high), max(low, high)
     return range(low, high)

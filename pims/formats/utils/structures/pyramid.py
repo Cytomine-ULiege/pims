@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -28,16 +29,19 @@ class PyramidTier:
     """
 
     def __init__(
-        self, width: int, height: int, tile_size: Union[Tuple[int, int], int],
+        self,
+        width: int,
+        height: int,
+        tile_size: Union[Tuple[int, int], int],
         pyramid: Pyramid,
-        data: dict = None
+        data: dict = None,
     ):
         self.width = width
         self.height = height
         self.tile_width = split_tuple(tile_size, 0)
         self.tile_height = split_tuple(tile_size, 1)
         self.pyramid = pyramid
-        self.data = data if type(data) is dict else dict()
+        self.data = data if isinstance(data, dict) else {}
 
     @property
     def n_pixels(self) -> int:
@@ -47,9 +51,11 @@ class PyramidTier:
     def factor(self) -> Tuple[float, float]:
         if self.pyramid.base is None:
             return 1.0, 1.0
-        else:
-            return self.pyramid.base.width / self.width, \
-                   self.pyramid.base.height / self.height
+
+        return (
+            self.pyramid.base.width / self.width,
+            self.pyramid.base.height / self.height,
+        )
 
     @property
     def width_factor(self) -> float:
@@ -123,11 +129,13 @@ class PyramidTier:
         return Tile(self, tx, ty).clip(self.width, self.height)
 
     def __eq__(self, o: object) -> bool:
-        return isinstance(o, PyramidTier) \
-               and o.width == self.width \
-               and o.height == self.height \
-               and o.tile_width == self.tile_width \
-               and o.tile_height == self.tile_height
+        return (
+            isinstance(o, PyramidTier)
+            and o.width == self.width
+            and o.height == self.height
+            and o.tile_width == self.tile_width
+            and o.tile_height == self.tile_height
+        )
 
 
 class Pyramid:
@@ -168,18 +176,18 @@ class Pyramid:
         return self.max_level - level if self.max_level > 0 else 0
 
     def insert_tier(
-        self, width: int, height: int, tile_size: Union[Tuple[int, int], int],
+        self,
+        width: int,
+        height: int,
+        tile_size: Union[Tuple[int, int], int],
         **tier_data
     ):
         """
         Insert a new pyramid tier in an existing pyramid.
         """
-        tier = PyramidTier(
-            width, height, tile_size, pyramid=self, data=tier_data
-        )
+        tier = PyramidTier(width, height, tile_size, pyramid=self, data=tier_data)
         idx = 0
-        while idx < len(self._tiers) \
-                and tier.n_pixels < self._tiers[idx].n_pixels:
+        while idx < len(self._tiers) and tier.n_pixels < self._tiers[idx].n_pixels:
             idx += 1
         self._tiers.insert(idx, tier)
 
@@ -189,13 +197,11 @@ class Pyramid:
     def get_tier_at_zoom(self, zoom: int) -> PyramidTier:
         return self.get_tier_at_level(self.zoom_to_level(zoom))
 
-    def get_tier_at(
-        self, tier_idx: int, tier_type: TierIndexType
-    ) -> PyramidTier:
+    def get_tier_at(self, tier_idx: int, tier_type: TierIndexType) -> PyramidTier:
         if tier_type == TierIndexType.ZOOM:
             return self.get_tier_at_zoom(tier_idx)
-        else:
-            return self.get_tier_at_level(tier_idx)
+
+        return self.get_tier_at_level(tier_idx)
 
     def __len__(self) -> int:
         return len(self._tiers)
@@ -203,9 +209,7 @@ class Pyramid:
     def __iter__(self):
         return iter(self._tiers)
 
-    def most_appropriate_tier_for_downsample_factor(
-        self, factor: float
-    ) -> PyramidTier:
+    def most_appropriate_tier_for_downsample_factor(self, factor: float) -> PyramidTier:
         if factor < self.base.average_factor:
             return self.base
 
@@ -239,9 +243,11 @@ class Pyramid:
         return self.most_appropriate_tier_for_downsample_factor(factor)
 
     def __eq__(self, o: object) -> bool:
-        return isinstance(o, Pyramid) \
-               and o.n_levels == self.n_levels \
-               and all([a == b for (a, b) in zip(o.tiers, self.tiers)])
+        return (
+            isinstance(o, Pyramid)
+            and o.n_levels == self.n_levels
+            and all(a == b for (a, b) in zip(o.tiers, self.tiers))
+        )
 
 
 @lru_cache(maxsize=4096)

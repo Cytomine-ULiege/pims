@@ -12,17 +12,26 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=logging-fstring-interpolation
+
 import logging
 from copy import copy
 from enum import Enum
 from typing import Dict, Iterator, Optional, Tuple, Union
 
 from cytomine.models import (
-    AbstractImage, AbstractSlice, AbstractSliceCollection, Annotation, AnnotationCollection,
+    AbstractImage,
+    AbstractSlice,
+    AbstractSliceCollection,
+    Annotation,
+    AnnotationCollection,
     ImageInstance,
     ProjectCollection,
     Property,
-    PropertyCollection, Term, TermCollection, UploadedFile
+    PropertyCollection,
+    Term,
+    TermCollection,
+    UploadedFile,
 )
 from cytomine.models.collection import CollectionPartialUploadException
 
@@ -111,8 +120,13 @@ class ImportListener:
         pass
 
     def end_unpacking(
-        self, path: Path, unpacked_path: Path, *args,
-        format: AbstractFormat = None, is_collection: bool = False, **kwargs
+        self,
+        path: Path,
+        unpacked_path: Path,
+        *args,
+        format: AbstractFormat = None,
+        is_collection: bool = False,
+        **kwargs,
     ):
         pass
 
@@ -170,11 +184,13 @@ class ImportListener:
 
 class CytomineListener(ImportListener):
     def __init__(
-        self, auth: Tuple[str, str, str], uf: UploadedFile,
+        self,
+        auth: Tuple[str, str, str],
+        uf: UploadedFile,
         root: Optional[UploadedFile] = None,
         existing_mapping: Optional[Dict[str, UploadedFile]] = None,
         projects: Optional[ProjectCollection] = None,
-        user_properties: Optional[Iterator[Tuple[str, str]]] = None
+        user_properties: Optional[Iterator[Tuple[str, str]]] = None,
     ):
         """
         Parameters
@@ -186,7 +202,7 @@ class CytomineListener(ImportListener):
             If set, it is supposed to already exist, i.e not new.
         """
         self.auth = auth
-        self.path_uf_mapping = dict()
+        self.path_uf_mapping = {}
 
         if uf.is_new():
             uf.save()
@@ -218,14 +234,17 @@ class CytomineListener(ImportListener):
     def new_listener_from_registered_child(self, child: Path):
         uf = self.get_uf(str(child))
         return CytomineListener(
-            self.auth, uf, existing_mapping=self.path_uf_mapping,
-            projects=self.projects, user_properties=self.user_properties
+            self.auth,
+            uf,
+            existing_mapping=self.path_uf_mapping,
+            projects=self.projects,
+            user_properties=self.user_properties,
         )
 
     def _find_uf_by_id(self, id: int) -> UploadedFile:
         return next(
             (uf for uf in self.path_uf_mapping.values() if uf.id == id),
-            UploadedFile().fetch(id)
+            UploadedFile().fetch(id),
         )
 
     def get_uf(self, path: Union[str, Path]) -> UploadedFile:
@@ -242,8 +261,8 @@ class CytomineListener(ImportListener):
     def _corresponding_error_status(status: int) -> int:
         if status < 100:
             return status + 1
-        else:
-            return UploadedFile.ERROR_UNEXPECTED
+
+        return UploadedFile.ERROR_UNEXPECTED
 
     def propagate_error(self, uf: UploadedFile):
         # Shouldn't be a core responsibility ?
@@ -289,8 +308,13 @@ class CytomineListener(ImportListener):
         uf.update()
 
     def end_unpacking(
-        self, path: Path, unpacked_path: Path, *args,
-        format: AbstractFormat = None, is_collection: bool = False, **kwargs
+        self,
+        path: Path,
+        unpacked_path: Path,
+        *args,
+        format: AbstractFormat = None,
+        is_collection: bool = False,
+        **kwargs,
     ):
         parent = self.get_uf(path)
         parent.status = UploadedFile.UNPACKED
@@ -429,9 +453,7 @@ class CytomineListener(ImportListener):
                 convert_quantity(image.physical_size_z, "micrometers"), 6
             )
         if image.frame_rate:
-            ai.fps = round(
-                convert_quantity(image.frame_rate, "Hz"), 6
-            )
+            ai.fps = round(convert_quantity(image.frame_rate, "Hz"), 6)
         ai.magnification = parse_int(image.objective.nominal_magnification)
 
         ai.save()
@@ -450,7 +472,7 @@ class CytomineListener(ImportListener):
                     if image.channels[i].suggested_name is not None
                 ]
                 names = list(dict.fromkeys(names))  # ordered uniqueness
-                name = '|'.join(names)
+                name = "|".join(names)
                 color = None
 
             for z in range(image.depth):
@@ -458,15 +480,21 @@ class CytomineListener(ImportListener):
                     mime = "image/pyrtiff"  # TODO: remove
                     asc.append(
                         AbstractSlice(
-                            ai.id, uf.id, mime, cc, z, t,
-                            channelName=name, channelColor=color
+                            ai.id,
+                            uf.id,
+                            mime,
+                            cc,
+                            z,
+                            t,
+                            channelName=name,
+                            channelColor=color,
                         )
                     )
         asc.save()
 
         properties = PropertyCollection(ai)
         for metadata in image.raw_metadata.values():
-            if metadata.value is not None and str(metadata.value) != '':
+            if metadata.value is not None and str(metadata.value) != "":
                 properties.append(
                     Property(ai, metadata.namespaced_key, str(metadata.value))
                 )
@@ -480,7 +508,7 @@ class CytomineListener(ImportListener):
 
         properties = PropertyCollection(ai)
         for k, v in self.user_properties:
-            if v is not None and str(v) != '':
+            if v is not None and str(v) != "":
                 properties.append(Property(ai, k, v))
         try:
             properties.save()
@@ -499,22 +527,27 @@ class CytomineListener(ImportListener):
 
             metadata_annots = image.annotations
             if len(metadata_annots) > 0:
-                metadata_terms = [ma.terms for ma in metadata_annots if len(ma.terms) > 0]
+                metadata_terms = [
+                    ma.terms for ma in metadata_annots if len(ma.terms) > 0
+                ]
                 metadata_terms = set(flatten(metadata_terms))
 
                 for instance in instances:
                     project_id = instance.project
-                    project = self.projects.find_by_attribute('id', project_id)
+                    project = self.projects.find_by_attribute("id", project_id)
                     ontology_id = project.ontology  # noqa
-                    ontology_terms = TermCollection().fetch_with_filter("project", project_id)
+                    ontology_terms = TermCollection().fetch_with_filter(
+                        "project", project_id
+                    )
                     terms_id_mapping = {t.name: t.id for t in ontology_terms}
 
                     for metadata_term in metadata_terms:
                         if metadata_term not in terms_id_mapping:
                             # TODO: user must have ontology rights !
                             term = Term(
-                                name=metadata_term, id_ontology=ontology_id,
-                                color="#AAAAAA"
+                                name=metadata_term,
+                                id_ontology=ontology_id,
+                                color="#AAAAAA",
                             ).save()
                             terms_id_mapping[term.name] = term.id
 
@@ -522,16 +555,18 @@ class CytomineListener(ImportListener):
                     for metadata_annot in metadata_annots:
                         term_ids = [terms_id_mapping[t] for t in metadata_annot.terms]
                         properties = [
-                            dict(key=k, value=v)
+                            {"key": k, "value": v}
                             for k, v in metadata_annot.properties.items()
                         ]
-                        annots.append(Annotation(
-                            location=metadata_annot.wkt,
-                            id_image=instance.id,
-                            id_terms=term_ids if len(term_ids) > 0 else None,
-                            properties=properties if len(properties) > 0 else None,
-                            user=uf.user
-                        ))
+                        annots.append(
+                            Annotation(
+                                location=metadata_annot.wkt,
+                                id_image=instance.id,
+                                id_terms=term_ids if len(term_ids) > 0 else None,
+                                properties=properties if len(properties) > 0 else None,
+                                user=uf.user,
+                            )
+                        )
 
                     try:
                         annots.save()
@@ -588,19 +623,22 @@ class StdoutListener(ImportListener):
         self.log.info(f"Start unpacking archive {path}")
 
     def end_unpacking(
-        self, path: Path, unpacked_path: Path, *args,
-        format: AbstractFormat = None, is_collection: bool = False, **kwargs
+        self,
+        path: Path,
+        unpacked_path: Path,
+        *args,
+        format: AbstractFormat = None,
+        is_collection: bool = False,
+        **kwargs,
     ):
         self.log.info(
-            f"The archive {path} is unpacked in directory "
-            f"{unpacked_path}."
+            f"The archive {path} is unpacked in directory " f"{unpacked_path}."
         )
         if is_collection:
             self.log.info(f"{path} is a collection.")
         else:
             self.log.info(
-                f"Identified format {format.get_name()} "
-                f"for {unpacked_path} "
+                f"Identified format {format.get_name()} " f"for {unpacked_path} "
             )
 
     def error_unpacking(self, path: Path, *args, **kwargs):
@@ -620,7 +658,7 @@ class StdoutListener(ImportListener):
 
     def error_integrity(self, path: Path, *args, **kwargs):
         self.log.error(f"Integrity error for {path}.")
-        for integrity_error in kwargs.get('integrity_errors', []):
+        for integrity_error in kwargs.get("integrity_errors", []):
             attr, e = integrity_error
             self.log.error(f"- {attr}: {e}")
 
@@ -638,24 +676,21 @@ class StdoutListener(ImportListener):
 
     def end_spatial_deploy(self, spatial_path: Path, *args, **kwargs):
         self.log.info(
-            f"Finished to deploy spatial representation "
-            f"at {spatial_path}"
+            f"Finished to deploy spatial representation " f"at {spatial_path}"
         )
 
     def start_histogram_deploy(self, hist_path: Path, image: Image, *args, **kwargs):
         self.log.info(f"--- HISTOGRAM representation deployment for {image} ---")
 
     def end_histogram_deploy(self, hist_path: Path, image: Image, *args, **kwargs):
-        self.log.info(
-            f"Finished to deploy histogram representation "
-            f"at {hist_path}"
-        )
+        self.log.info(f"Finished to deploy histogram representation " f"at {hist_path}")
 
     def error_histogram(self, hist_path: Path, image: Image, *args, **kwargs):
         self.log.error(
             f"Failed to build histogram at {hist_path} "
             f"for image {image} "
-            f"({kwargs.get('exception')}", exc_info=True
+            f"({kwargs.get('exception')}",
+            exc_info=True,
         )
 
     def end_successful_import(self, path: Path, image: Image, *args, **kwargs):

@@ -11,9 +11,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pims.formats import FORMATS, FormatsByExt
 from pims.formats.utils.abstract import AbstractFormat, CachedDataPath
@@ -74,29 +75,21 @@ class FormatFactory:
 
 class ImportableFormatFactory(FormatFactory):
     def __init__(self, match_on_ext: bool = False):
-        formats = {
-            e: f
-            for e, f in FORMATS.items()
-            if f.is_importable()
-        }
-        super(ImportableFormatFactory, self).__init__(match_on_ext, formats)
+        formats = {e: f for e, f in FORMATS.items() if f.is_importable()}
+        super().__init__(match_on_ext, formats)
 
 
 class SpatialReadableFormatFactory(FormatFactory):
     def __init__(self, match_on_ext: bool = False):
         formats = {
-            e: f
-            for e, f in FORMATS.items()
-            if f.is_spatial() and f.is_readable()
+            e: f for e, f in FORMATS.items() if f.is_spatial() and f.is_readable()
         }
-        super(SpatialReadableFormatFactory, self).__init__(match_on_ext, formats)
+        super().__init__(match_on_ext, formats)
 
 
 class SpectralReadableFormatFactory(FormatFactory):
     def __init__(self, match_on_ext: bool = False):
         formats = {
-            e: f
-            for e, f in FORMATS.items()
-            if f.is_spectral() and f.is_readable()
+            e: f for e, f in FORMATS.items() if f.is_spectral() and f.is_readable()
         }
-        super(SpectralReadableFormatFactory, self).__init__(match_on_ext, formats)
+        super().__init__(match_on_ext, formats)

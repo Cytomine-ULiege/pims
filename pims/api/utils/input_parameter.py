@@ -17,7 +17,11 @@ from typing import List, Optional, Union
 
 from pims.api.exceptions import BadRequestException
 from pims.api.utils.models import ChannelReduction, GenericReduction, TierIndexType
-from pims.api.utils.output_parameter import Size, check_level_validity, check_zoom_validity
+from pims.api.utils.output_parameter import (
+    Size,
+    check_level_validity,
+    check_zoom_validity,
+)
 from pims.api.utils.range_parameter import is_range, parse_range
 from pims.files.image import Image
 from pims.processing.region import Region
@@ -25,8 +29,14 @@ from pims.utils.iterables import ensure_list
 
 
 def parse_region(
-    in_image: Image, top: Size, left: Size, width: Size, height: Size, tier_idx: int = 0,
-    tier_type: TierIndexType = TierIndexType.LEVEL, silent_oob: bool = False
+    in_image: Image,
+    top: Size,
+    left: Size,
+    width: Size,
+    height: Size,
+    tier_idx: int = 0,
+    tier_type: TierIndexType = TierIndexType.LEVEL,
+    silent_oob: bool = False,
 ) -> Region:
     """
     Parse a region
@@ -63,13 +73,13 @@ def parse_region(
         check_level_validity(in_image.pyramid, tier_idx)
         ref_tier = in_image.pyramid.get_tier_at_level(tier_idx)
 
-    if type(top) == float:
+    if isinstance(top, float):
         top *= ref_tier.height
-    if type(left) == float:
+    if isinstance(left, float):
         left *= ref_tier.width
-    if type(width) == float:
+    if isinstance(width, float):
         width *= ref_tier.width
-    if type(height) == float:
+    if isinstance(height, float):
         height *= ref_tier.height
 
     downsample = (ref_tier.width_factor, ref_tier.height_factor)
@@ -86,8 +96,10 @@ def parse_region(
 
 
 def parse_planes(
-    planes_to_parse: List[Union[int, str]], n_planes: int, default: Union[int, List[int]] = 0,
-    name: str = 'planes'
+    planes_to_parse: List[Union[int, str]],
+    n_planes: int,
+    default: Union[int, List[int]] = 0,
+    name: str = "planes",
 ) -> List[int]:
     """
     Get a set of planes from a list of plane indexes and ranges.
@@ -115,21 +127,21 @@ def parse_planes(
         If an item of `planes_to_parse´ is invalid.
         If the set of valid planes is empty
     """
-    plane_indexes = list()
+    plane_indexes = []
 
     if len(planes_to_parse) == 0:
         return sorted(set((ensure_list(default))))
 
     for plane in planes_to_parse:
-        if type(plane) is int:
+        if isinstance(plane, int):
             plane_indexes.append(plane)
         elif is_range(plane):
             plane_indexes += [*parse_range(plane, 0, n_planes)]
         else:
             raise BadRequestException(
-                detail=f'{plane} is not a valid index or range for {name}.'
+                detail=f"{plane} is not a valid index or range for {name}."
             )
-    plane_set = sorted(set([idx for idx in plane_indexes if 0 <= idx < n_planes]))
+    plane_set = sorted({idx for idx in plane_indexes if 0 <= idx < n_planes})
     if len(plane_set) == 0:
         raise BadRequestException(detail=f"No valid indexes for {name}")
     return plane_set
@@ -142,7 +154,7 @@ def get_channel_indexes(image: Image, planes: List[Union[int, str]]) -> List[int
     By default, all channels are considered.
     """
     default = [*range(0, image.n_channels)]
-    return parse_planes(planes, image.n_channels, default, 'channels')
+    return parse_planes(planes, image.n_channels, default, "channels")
 
 
 def get_zslice_indexes(image: Image, planes: List[int]) -> List[int]:
@@ -152,7 +164,7 @@ def get_zslice_indexes(image: Image, planes: List[int]) -> List[int]:
     By default, the median focal plane is considered.
     """
     default = [round(image.depth / 2)]
-    return parse_planes(planes, image.depth, default, 'z_slices')
+    return parse_planes(planes, image.depth, default, "z_slices")
 
 
 def get_timepoint_indexes(image: Image, planes: List[int]) -> List[int]:
@@ -162,12 +174,13 @@ def get_timepoint_indexes(image: Image, planes: List[int]) -> List[int]:
     By default, the first timepoint considered.
     """
     default = [0]
-    return parse_planes(planes, image.duration, default, 'timepoints')
+    return parse_planes(planes, image.duration, default, "timepoints")
 
 
 def check_reduction_validity(
-    planes: List[int], reduction: Optional[Union[GenericReduction, ChannelReduction]],
-    name: str = 'planes'
+    planes: List[int],
+    reduction: Optional[Union[GenericReduction, ChannelReduction]],
+    name: str = "planes",
 ):
     """
     Verify if a reduction function is given when needed i.e. when
@@ -188,4 +201,4 @@ def check_reduction_validity(
         If no reduction function is given while needed.
     """
     if len(planes) > 1 and reduction is None:
-        raise BadRequestException(detail=f'A reduction is required for {name}')
+        raise BadRequestException(detail=f"A reduction is required for {name}")

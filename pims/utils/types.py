@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=bare-except,broad-exception-caught,consider-using-f-string
+
 import json
 from datetime import datetime
 from typing import Any, List, Union
@@ -27,12 +29,13 @@ def parse_json(value: Any, raise_exc: bool = False) -> Union[dict, None]:
 
 
 def parse_boolean(value: Any, raise_exc: bool = False) -> Union[bool, None]:
-    _true_set = {'yes', 'true', 't', 'y', '1'}
-    _false_set = {'no', 'false', 'f', 'n', '0'}
+    _true_set = {"yes", "true", "t", "y", "1"}
+    _false_set = {"no", "false", "f", "n", "0"}
 
     if value is True or value is False:
         return value
-    elif isinstance(value, str):
+
+    if isinstance(value, str):
         value = value.lower()
         if value in _true_set:
             return True
@@ -45,7 +48,7 @@ def parse_boolean(value: Any, raise_exc: bool = False) -> Union[bool, None]:
 
 
 def parse_float(value: Any, raise_exc: bool = False) -> Union[float, None]:
-    if type(value) == str:
+    if isinstance(value, str):
         value = value.replace(",", ".")
     try:
         return float(value)
@@ -65,13 +68,12 @@ def parse_int(value: Any, raise_exc: bool = False) -> Union[int, None]:
 
 
 def parse_datetime(
-    value: Any, formats: List[str] = None, raise_exc: bool = False
+    value: Any,
+    formats: List[str] = None,
+    raise_exc: bool = False,
 ) -> Union[datetime, None]:
     if formats is None:
-        formats = [
-            "%Y:%m:%d %H:%M:%S",
-            "%m/%d/%y %H:%M:%S"
-        ]
+        formats = ["%Y:%m:%d %H:%M:%S", "%m/%d/%y %H:%M:%S"]
 
     for format in formats:
         try:
@@ -84,20 +86,22 @@ def parse_datetime(
 
 
 def parse_bytes(
-    value: Any, encoding: str = None, errors: str = 'strict',
-    raise_exc: bool = False
+    value: Any,
+    encoding: str = None,
+    errors: str = "strict",
+    raise_exc: bool = False,
 ) -> Union[str, None]:
     """Return Unicode string from encoded bytes."""
     try:
         if encoding is not None:
             return value.decode(encoding, errors)
         try:
-            return value.decode('utf-8', errors)
+            return value.decode("utf-8", errors)
         except UnicodeDecodeError:
-            return value.decode('cp1252', errors)
-    except:  # noqa
+            return value.decode("cp1252", errors)
+    except Exception as exc:  # noqa
         if raise_exc:
-            raise ValueError
+            raise ValueError from exc
         return None
 
 

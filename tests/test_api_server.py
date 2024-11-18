@@ -11,10 +11,12 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+
 from pims import __api_version__, __version__
 
 
-def test_status(app, client):
+def test_status(app, client):  # pylint: disable=unused-argument
     response = client.get("/info")
     assert response.status_code == 200
 

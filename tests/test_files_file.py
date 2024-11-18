@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=unused-argument
+
 from datetime import datetime
 
 from pims.files.file import Path
@@ -25,8 +27,11 @@ def test_basic_file(app, settings):
 
 
 def test_extensions(app, settings):
-    files = ("upload0/myfile.svs", "upload2/processed/myfile.ome.tiff",
-             "upload5/processed/visualisation.mrxs.format")
+    files = (
+        "upload0/myfile.svs",
+        "upload2/processed/myfile.ome.tiff",
+        "upload5/processed/visualisation.mrxs.format",
+    )
     extensions = (".svs", ".ome.tiff", ".mrxs.format")
 
     for f, ext in zip(files, extensions):
@@ -46,8 +51,8 @@ def test_upload_root(app, settings, fake_files):
 def test_roles(app, settings, fake_files):
     root = Path(settings.root)
     for ff in fake_files.values():
-        name = ff['filepath']
-        role = ff['role']
+        name = ff["filepath"]
+        role = ff["role"]
         path = root / Path(name)
         if role == "upload":
             assert path.has_upload_role()
@@ -79,8 +84,8 @@ def test_roles(app, settings, fake_files):
 def test_collection(app, settings, fake_files):
     root = Path(settings.root)
     for ff in fake_files.values():
-        name = ff['filepath']
-        is_collection = ff['collection']
+        name = ff["filepath"]
+        is_collection = ff["collection"]
         path = root / Path(name)
         assert path.is_collection() == is_collection
         assert path.is_single() == (not is_collection)

@@ -11,18 +11,19 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Any, Dict, Iterable, List, Optional, Sized, TypeVar, Union
 
 from pims.api.exceptions import BadRequestException
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def split_tuple(tuple_: Any, index: int) -> Any:
-    if type(tuple_) == tuple:
+    if isinstance(tuple_, tuple):
         return tuple_[index]
-    else:
-        return tuple_
+
+    return tuple_
 
 
 def find_first_available_int(values, mini=0, maxi=100) -> int:
@@ -69,13 +70,15 @@ def ensure_list(value: Union[List[T], T]) -> List[T]:
         The value converted as a list if it is not already the case.
     """
     if value is not None:
-        return value if type(value) is list else [value]
+        return value if isinstance(value, list) else [value]
     return []
 
 
 def check_array_size(
-    iterable: Optional[Sized], allowed: List[int], nullable: bool = True,
-    name: Optional[str] = None
+    iterable: Optional[Sized],
+    allowed: List[int],
+    nullable: bool = True,
+    name: Optional[str] = None,
 ):
     """
     Verify an iterable has an allowed size or, optionally, is empty.
@@ -100,28 +103,30 @@ def check_array_size(
     """
     if iterable is None:
         if not nullable:
-            name = 'A parameter' if not name else name
-            raise BadRequestException(detail=f"{name} is unset while it is not allowed.")
+            name = "A parameter" if not name else name
+            raise BadRequestException(
+                detail=f"{name} is unset while it is not allowed."
+            )
         return
 
     if not len(iterable) in allowed:
-        name = 'A parameter' if not name else name
-        allowed_str = ', '.join([str(i) for i in set(allowed)])
+        name = "A parameter" if not name else name
+        allowed_str = ", ".join([str(i) for i in set(allowed)])
         raise BadRequestException(
-            f'{name} has a size of {len(iterable)} '
-            f'while only these sizes are allowed: {allowed_str}'
+            f"{name} has a size of {len(iterable)} "
+            f"while only these sizes are allowed: {allowed_str}"
         )
 
 
 def check_array_size_parameters(
-    parameter_names: Iterable[str], parameters: Dict, allowed: List[int],
-    nullable: bool = True
+    parameter_names: Iterable[str],
+    parameters: Dict,
+    allowed: List[int],
+    nullable: bool = True,
 ):
     for name in parameter_names:
         value = parameters.get(name)
-        check_array_size(
-            value, allowed=allowed, nullable=nullable, name=name
-        )
+        check_array_size(value, allowed=allowed, nullable=nullable, name=name)
 
 
 def flatten(t):

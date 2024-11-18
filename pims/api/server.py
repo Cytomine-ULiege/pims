@@ -22,16 +22,18 @@ router = APIRouter()
 
 
 class ServerInfo(BaseModel):
-    version: str = Field(..., description='PIMS version')
-    api_version: str = Field(..., description='PIMS API specification version')
+    version: str = Field(..., description="PIMS version")
+    api_version: str = Field(..., description="PIMS API specification version")
     settings: ReadableSettings
 
 
-@router.get('/info', response_model=ServerInfo, tags=['Server'])
+@router.get("/info", response_model=ServerInfo, tags=["Server"])
 def show_status() -> ServerInfo:
     """
     PIMS Server status.
     """
     return ServerInfo(
-        version=__version__, api_version=__api_version__, settings=get_settings()
+        version=__version__,
+        api_version=__api_version__,
+        settings=get_settings(),
     )

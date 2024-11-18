@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import itertools
 import operator
 from typing import List, Optional
@@ -21,18 +22,23 @@ from starlette import status
 
 from pims.api.exceptions import BadRequestException, check_representation_existence
 from pims.api.utils.input_parameter import (
-    get_channel_indexes, get_timepoint_indexes,
-    get_zslice_indexes
+    get_channel_indexes,
+    get_timepoint_indexes,
+    get_zslice_indexes,
 )
 from pims.api.utils.models import CollectionSize, HistogramType
 from pims.api.utils.parameter import imagepath_parameter
 from pims.api.utils.response import FastJsonResponse, response_list
 from pims.files.file import HISTOGRAM_STEM, Path
-from pims.processing.histograms.utils import argmax_nonzero, argmin_nonzero, build_histogram_file
+from pims.processing.histograms.utils import (
+    argmax_nonzero,
+    argmin_nonzero,
+    build_histogram_file,
+)
 from pims.utils.iterables import ensure_list
 
 router = APIRouter()
-api_tags = ['Histograms']
+api_tags = ["Histograms"]
 
 
 class HistogramInfo(BaseModel):
@@ -44,7 +50,10 @@ class HistogramInfo(BaseModel):
 class Histogram(HistogramInfo):
     first_bin: int = Field(..., description="Index of first bin returned in histogram")
     last_bin: int = Field(..., description="Index of last bin returned in histogram")
-    n_bins: int = Field(..., description="The number of bins in the full range histogram")
+    n_bins: int = Field(
+        ...,
+        description="The number of bins in the full range histogram",
+    )
     histogram: List[int] = Field(..., description="Histogram")
 
 
@@ -61,13 +70,17 @@ class ChannelHistogram(ChannelHistogramInfo, Histogram):
 
 class ChannelsHistogramCollection(CollectionSize):
     items: List[ChannelHistogram] = Field(
-        None, description='Array of channel histograms', title='Channel histogram'
+        None,
+        description="Array of channel histograms",
+        title="Channel histogram",
     )
 
 
 class ChannelsHistogramInfoCollection(CollectionSize):
     items: List[ChannelHistogramInfo] = Field(
-        None, description='Array of channel histograms', title='Channel histogram'
+        None,
+        description="Array of channel histograms",
+        title="Channel histogram",
     )
 
 
@@ -82,13 +95,17 @@ class PlaneHistogram(PlaneHistogramInfo, Histogram):
 
 class PlaneHistogramCollection(CollectionSize):
     items: List[PlaneHistogram] = Field(
-        None, description='Array of plane histograms', title='Plane histogram'
+        None,
+        description="Array of plane histograms",
+        title="Plane histogram",
     )
 
 
 class PlaneHistogramInfoCollection(CollectionSize):
     items: List[PlaneHistogramInfo] = Field(
-        None, description='Array of plane histograms', title='Plane histogram'
+        None,
+        description="Array of plane histograms",
+        title="Plane histogram",
     )
 
 
@@ -99,8 +116,7 @@ def parse_n_bins(n_bins, hist_len):
 def _histogram_binning(hist, n_bins):
     if hist.shape[-1] % n_bins != 0:
         raise BadRequestException(
-            detail=f"Cannot make {n_bins} bins from histogram "
-                   f"with shape {hist.shape}"
+            detail=f"Cannot make {n_bins} bins from histogram with shape {hist.shape}"
         )
     return hist.reshape((n_bins, -1)).sum(axis=1)
 
@@ -109,12 +125,12 @@ def histogram_formatter(hist, bounds, n_bins, full_range):
     if n_bins == len(hist):
         bin_bounds = bounds
         if not full_range:
-            hist = hist[bin_bounds[0]:bin_bounds[1] + 1]
+            hist = hist[bin_bounds[0] : bin_bounds[1] + 1]
     else:
         hist = _histogram_binning(hist, n_bins)
         bin_bounds = argmin_nonzero(hist), argmax_nonzero(hist)
         if not full_range:
-            hist = hist[bin_bounds[0]:bin_bounds[1] + 1]
+            hist = hist[bin_bounds[0] : bin_bounds[1] + 1]
 
     first_bin, last_bin = bin_bounds
     mini, maxi = bounds
@@ -124,7 +140,7 @@ def histogram_formatter(hist, bounds, n_bins, full_range):
         "last_bin": last_bin,
         "minimum": mini,
         "maximum": maxi,
-        "n_bins": n_bins
+        "n_bins": n_bins,
     }
 
 
@@ -137,17 +153,21 @@ class HistogramConfig:
         self,
         n_bins: int = Query(
             256,
-            description="Number of bins. Must be a power of 2. "
-                        "If `nbins > 2 ** image.significant_bits` then "
-                        "´nbins = 2 ** image.significant_bits` "
+            description=(
+                "Number of bins. Must be a power of 2. "
+                "If `nbins > 2 ** image.significant_bits` then "
+                "´nbins = 2 ** image.significant_bits` "
+            ),
         ),
         full_range: bool = Query(
             False,
-            description="Whether to return full histogram range, "
-                        "including leading and ending zero bins. "
-                        "When set, `first_bin = 0` and "
-                        "`last_bin = 2 ** image.significant_bits - 1`."
-        )
+            description=(
+                "Whether to return full histogram range, "
+                "including leading and ending zero bins. "
+                "When set, `first_bin = 0` and "
+                "`last_bin = 2 ** image.significant_bits - 1`."
+            ),
+        ),
     ):
         if not is_power_of_2(n_bins):
             raise BadRequestException(detail=f"{n_bins} is not a power of 2.")
@@ -157,13 +177,13 @@ class HistogramConfig:
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-image',
-    tags=api_tags, response_model=Histogram,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-image",
+    tags=api_tags,
+    response_model=Histogram,
+    response_class=FastJsonResponse,
 )
 def show_image_histogram(
-    path: Path = Depends(imagepath_parameter),
-    hist_config: HistogramConfig = Depends()
+    path: Path = Depends(imagepath_parameter), hist_config: HistogramConfig = Depends()
 ):
     """
     Get histogram for full image where all planes (C,Z,T) are merged.
@@ -176,20 +196,21 @@ def show_image_histogram(
     return Histogram(
         type=htype,
         **histogram_formatter(
-            in_image.image_histogram(), in_image.image_bounds(),
-            n_bins, hist_config.full_range
-        )
+            in_image.image_histogram(),
+            in_image.image_bounds(),
+            n_bins,
+            hist_config.full_range,
+        ),
     )
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-image/bounds',
-    tags=api_tags, response_model=HistogramInfo,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-image/bounds",
+    tags=api_tags,
+    response_model=HistogramInfo,
+    response_class=FastJsonResponse,
 )
-def show_image_histogram_bounds(
-    path: Path = Depends(imagepath_parameter)
-):
+def show_image_histogram_bounds(path: Path = Depends(imagepath_parameter)):
     """
     Get histogram info for full image where all planes (C,Z,T) are merged.
     """
@@ -202,15 +223,17 @@ def show_image_histogram_bounds(
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-channels',
-    tags=api_tags, response_model=ChannelsHistogramCollection,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-channels",
+    tags=api_tags,
+    response_model=ChannelsHistogramCollection,
+    response_class=FastJsonResponse,
 )
 def show_channels_histogram(
     path: Path = Depends(imagepath_parameter),
     hist_config: HistogramConfig = Depends(),
     channels: Optional[List[conint(ge=0)]] = Query(
-        None, description="Only return histograms for these channels"
+        None,
+        description="Only return histograms for these channels",
     ),
 ):
     """
@@ -240,8 +263,9 @@ def show_channels_histogram(
                 **histogram_formatter(
                     in_image.channel_histogram(channel),
                     in_image.channel_bounds(channel),
-                    n_bins, hist_config.full_range
-                )
+                    n_bins,
+                    hist_config.full_range,
+                ),
             )
         )
 
@@ -249,14 +273,16 @@ def show_channels_histogram(
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-channels/bounds',
-    tags=api_tags, response_model=ChannelsHistogramInfoCollection,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-channels/bounds",
+    tags=api_tags,
+    response_model=ChannelsHistogramInfoCollection,
+    response_class=FastJsonResponse,
 )
 def show_channels_histogram_bounds(
     path: Path = Depends(imagepath_parameter),
     channels: Optional[List[conint(ge=0)]] = Query(
-        None, description="Only return histograms for these channels"
+        None,
+        description="Only return histograms for these channels",
     ),
 ):
     """
@@ -284,7 +310,8 @@ def show_channels_histogram_bounds(
                 sample=(channel % in_image.n_samples),
                 type=htype,
                 color=in_image.channels[channel].hex_color,
-                minimum=mini, maximum=maxi
+                minimum=mini,
+                maximum=maxi,
             )
         )
 
@@ -292,9 +319,10 @@ def show_channels_histogram_bounds(
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-plane/z/{z_slices}/t/{timepoints}',
-    tags=api_tags, response_model=PlaneHistogramCollection,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-plane/z/{z_slices}/t/{timepoints}",
+    tags=api_tags,
+    response_model=PlaneHistogramCollection,
+    response_class=FastJsonResponse,
 )
 def show_plane_histogram(
     z_slices: conint(ge=0),
@@ -302,7 +330,8 @@ def show_plane_histogram(
     path: Path = Depends(imagepath_parameter),
     hist_config: HistogramConfig = Depends(),
     channels: Optional[List[conint(ge=0)]] = Query(
-        None, description="Only return histograms for these channels"
+        None,
+        description="Only return histograms for these channels",
     ),
 ):
     """
@@ -328,13 +357,16 @@ def show_plane_histogram(
                 channel=c,
                 concrete_channel=(c // in_image.n_samples),
                 sample=(c % in_image.n_samples),
-                z_slice=z, timepoint=t, type=htype,
+                z_slice=z,
+                timepoint=t,
+                type=htype,
                 color=in_image.channels[c].hex_color,
                 **histogram_formatter(
                     in_image.plane_histogram(c, z, t),
                     in_image.plane_bounds(c, z, t),
-                    n_bins, hist_config.full_range
-                )
+                    n_bins,
+                    hist_config.full_range,
+                ),
             )
         )
 
@@ -342,16 +374,18 @@ def show_plane_histogram(
 
 
 @router.get(
-    '/image/{filepath:path}/histogram/per-plane/z/{z_slices}/t/{timepoints}/bounds',
-    tags=api_tags, response_model=PlaneHistogramInfoCollection,
-    response_class=FastJsonResponse
+    "/image/{filepath:path}/histogram/per-plane/z/{z_slices}/t/{timepoints}/bounds",
+    tags=api_tags,
+    response_model=PlaneHistogramInfoCollection,
+    response_class=FastJsonResponse,
 )
 def show_plane_histogram(
     z_slices: conint(ge=0),
     timepoints: conint(ge=0),
     path: Path = Depends(imagepath_parameter),
     channels: Optional[List[conint(ge=0)]] = Query(
-        None, description="Only return histograms for these channels"
+        None,
+        description="Only return histograms for these channels",
     ),
 ):
     """
@@ -377,23 +411,26 @@ def show_plane_histogram(
                 channel=c,
                 concrete_channel=(c // in_image.n_samples),
                 sample=(c % in_image.n_samples),
-                z_slice=z, timepoint=t, type=htype,
+                z_slice=z,
+                timepoint=t,
+                type=htype,
                 color=in_image.channels[c].hex_color,
-                minimum=mini, maximum=maxi
+                minimum=mini,
+                maximum=maxi,
             )
         )
 
     return response_list(hist_info)
 
 
-@router.post('/image/{filepath:path}/histogram', tags=api_tags)
+@router.post("/image/{filepath:path}/histogram", tags=api_tags)
 def compute_histogram(
     response: Response,
     background: BackgroundTasks,
     path: Path = Depends(imagepath_parameter),
     # companion_file_id: Optional[int] = Body(None, description="Cytomine ID for the histogram")
     sync: bool = True,
-    overwrite: bool = True
+    overwrite: bool = True,
 ):
     """
     Ask for histogram computation
@@ -408,5 +445,11 @@ def compute_histogram(
         build_histogram_file(in_image, hist_path, hist_type, overwrite)
         response.status_code = status.HTTP_201_CREATED
     else:
-        background.add_task(build_histogram_file, in_image, hist_path, hist_type, overwrite)
+        background.add_task(
+            build_histogram_file,
+            in_image,
+            hist_path,
+            hist_type,
+            overwrite,
+        )
         response.status_code = status.HTTP_202_ACCEPTED

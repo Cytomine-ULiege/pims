@@ -11,14 +11,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 import shutil
 from typing import Tuple
 
 import numpy as np
-import zarr as zarr
-from skimage.exposure import histogram
+import zarr
+from skimage.exposure import histogram  # pylint: disable=no-name-in-module
 
 from pims.api.utils.models import Colorspace, HistogramType
 from pims.api.utils.output_parameter import get_thumb_output_dimensions
@@ -27,8 +26,13 @@ from pims.files.file import Path
 from pims.files.histogram import Histogram
 from pims.processing.histograms import ZarrHistogramFormat
 from pims.processing.histograms.format import (
-    ZHF_ATTR_FORMAT, ZHF_ATTR_TYPE, ZHF_BOUNDS, ZHF_HIST, ZHF_PER_CHANNEL, ZHF_PER_IMAGE,
-    ZHF_PER_PLANE
+    ZHF_ATTR_FORMAT,
+    ZHF_ATTR_TYPE,
+    ZHF_BOUNDS,
+    ZHF_HIST,
+    ZHF_PER_CHANNEL,
+    ZHF_PER_IMAGE,
+    ZHF_PER_PLANE,
 )
 from pims.processing.pixels import ImagePixels
 from pims.utils.math import max_intensity
@@ -68,7 +72,7 @@ def clamp_histogram(hist, bounds=None) -> Tuple[np.ndarray, np.ndarray]:
         sup = argmax_nonzero(hist)
     else:
         inf, sup = bounds
-    return hist[inf:sup + 1], np.arange(inf, sup + 1)
+    return hist[inf : sup + 1], np.arange(inf, sup + 1)
 
 
 def rescale_histogram(hist: np.ndarray, bitdepth: int) -> np.ndarray:
@@ -80,18 +84,16 @@ def rescale_histogram(hist: np.ndarray, bitdepth: int) -> np.ndarray:
     if multi:
         hist = np.atleast_2d(hist)
 
-    hist = hist.reshape(
-        (hist.shape[0], max_intensity(bitdepth, count=True), -1)
-    ).sum(axis=2)
+    hist = hist.reshape((hist.shape[0], max_intensity(bitdepth, count=True), -1)).sum(
+        axis=2
+    )
 
     if multi:
         return np.squeeze(hist)
     return hist
 
 
-def change_colorspace_histogram(
-    hist: np.ndarray, colorspace: Colorspace
-) -> np.ndarray:
+def change_colorspace_histogram(hist: np.ndarray, colorspace: Colorspace) -> np.ndarray:
     """
     Transform a 1D histogram or a list of 1D histograms colorspace if
     needed.
@@ -132,8 +134,7 @@ def _extract_np_thumb(image):
 
 
 def build_histogram_file(
-    in_image, dest, hist_type: HistogramType,
-    overwrite: bool = False
+    in_image, dest, hist_type: HistogramType, overwrite: bool = False
 ):
     """
     Build an histogram for an image and save it as zarr file.
@@ -170,7 +171,7 @@ def build_histogram_file(
 
     # While the file is not fully built, we save it at a temporary location
     tmp_dest = dest.parent / Path(f"tmp_{dest.name}")
-    zroot = zarr.open_group(str(tmp_dest), mode='w')
+    zroot = zarr.open_group(str(tmp_dest), mode="w")
     zroot.attrs[ZHF_ATTR_TYPE] = hist_type
     zroot.attrs[ZHF_ATTR_FORMAT] = "PIMS-1.0"
 
@@ -183,15 +184,12 @@ def build_histogram_file(
     npplane_hist = np.zeros(shape=shape + (n_values,), dtype=np.uint64)
     for data, c_range, z, t, ratio in extract_fn(in_image):
         for read, c in enumerate(c_range):
-            h, _ = histogram(data[:, :, read], source_range='dtype')
+            h, _ = histogram(data[:, :, read], source_range="dtype")
             npplane_hist[t, z, c, :] += np.rint(h * ratio).astype(np.uint64)
     zplane.array(ZHF_HIST, npplane_hist)
     zplane.array(
         ZHF_BOUNDS,
-        np.stack(
-            (argmin_nonzero(npplane_hist),
-             argmax_nonzero(npplane_hist)), axis=-1
-        )
+        np.stack((argmin_nonzero(npplane_hist), argmax_nonzero(npplane_hist)), axis=-1),
     )
 
     # Create the group for channel histogram
@@ -201,9 +199,8 @@ def build_histogram_file(
     zchannel.array(
         ZHF_BOUNDS,
         np.stack(
-            (argmin_nonzero(npchannel_hist),
-             argmax_nonzero(npchannel_hist)), axis=-1
-        )
+            (argmin_nonzero(npchannel_hist), argmax_nonzero(npchannel_hist)), axis=-1
+        ),
     )
 
     # Create the group for image histogram
@@ -211,8 +208,7 @@ def build_histogram_file(
     npimage_hist = np.sum(npchannel_hist, axis=0)
     zimage.array(ZHF_HIST, npimage_hist)
     zimage.array(
-        ZHF_BOUNDS,
-        [argmin_nonzero(npimage_hist), argmax_nonzero(npimage_hist)]
+        ZHF_BOUNDS, [argmin_nonzero(npimage_hist), argmax_nonzero(npimage_hist)]
     )
 
     # Remove redundant data
