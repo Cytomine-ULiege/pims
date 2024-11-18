@@ -23,7 +23,9 @@ class PimsHandler(RichHandler):
             getattr(record, "markup") if hasattr(record, "markup") else self.markup
         )
         use_highlighter = (
-            getattr(record, "highlight") if hasattr(record, "highlight") else self.highlighter
+            getattr(record, "highlight")
+            if hasattr(record, "highlight")
+            else self.highlighter
         )
         message_text = Text.from_markup(message) if use_markup else Text(message)
         if use_highlighter:
