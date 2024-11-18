@@ -22,9 +22,9 @@ from typing import Callable, Dict, List, Tuple, Type, Union
 
 from pims.processing.adapters import RawImagePixels, RawImagePixelsType, imglib_adapters
 
-FILTER_PLUGIN_PREFIX = 'pims_filter_'
+FILTER_PLUGIN_PREFIX = "pims_filter_"
 NON_PLUGINS_MODULES = ["pims.filters.utils"]
-_CAMEL_TO_SPACE_PATTERN = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
+_CAMEL_TO_SPACE_PATTERN = re.compile(r"((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))")
 
 logger = logging.getLogger("pims.app")
 logger.info("[green bold]Filters initialization...")
@@ -35,13 +35,16 @@ class AbstractFilter(ABC):
     Base class for a filter.
     Filters are expected to be called like functions.
     """
+
     _impl: Dict[RawImagePixelsType, Callable]
 
     def __init__(self, histogram=None):
         self._impl = {}
 
         if self.require_histogram() and histogram is None:
-            raise ValueError("Histogram parameter is not set, while the filter requires it.")
+            raise ValueError(
+                "Histogram parameter is not set, while the filter requires it."
+            )
         self.histogram = histogram
 
     @property
@@ -50,12 +53,15 @@ class AbstractFilter(ABC):
 
     @property
     def implementation_adapters(
-        self
+        self,
     ) -> Dict[Tuple[RawImagePixelsType, RawImagePixelsType], Callable]:
         return imglib_adapters
 
     def __call__(
-        self, obj: RawImagePixels, *args, **kwargs
+        self,
+        obj: RawImagePixels,
+        *args,
+        **kwargs,
     ) -> Union[RawImagePixels, bytes]:
         """
         Apply image operation on given obj. Return type is a convertible
@@ -75,11 +81,10 @@ class AbstractFilter(ABC):
         """
         Initialize the filter, such that all third-party libs are ready.
         """
-        pass
 
     @classmethod
     def identifier(cls):
-        return cls.__name__.replace('Filter', '')
+        return cls.__name__.replace("Filter", "")
 
     @classmethod
     def get_identifier(cls, uppercase=True):
@@ -114,7 +119,7 @@ class AbstractFilter(ABC):
 
     @classmethod
     def get_name(cls):
-        return re.sub(_CAMEL_TO_SPACE_PATTERN, r' \1', cls.get_identifier(False))
+        return re.sub(_CAMEL_TO_SPACE_PATTERN, r" \1", cls.get_identifier(False))
 
     @classmethod
     def get_description(cls):
@@ -137,18 +142,23 @@ class AbstractFilter(ABC):
 
     @classmethod
     def get_plugin_name(cls):
-        return '.'.join(cls.__module__.split('.')[:-1])
+        return ".".join(cls.__module__.split(".")[:-1])
 
 
 def _discover_filter_plugins():
-    plugins = [name for _, name, _ in iter_modules(__path__, prefix="pims.filters.")
-               if name not in NON_PLUGINS_MODULES]
-    plugins += [name for _, name, _ in iter_modules()
-                if name.startswith(FILTER_PLUGIN_PREFIX)]
+    plugins = [
+        name
+        for _, name, _ in iter_modules(__path__, prefix="pims.filters.")
+        if name not in NON_PLUGINS_MODULES
+    ]
+    plugins += [
+        name for _, name, _ in iter_modules() if name.startswith(FILTER_PLUGIN_PREFIX)
+    ]
 
     logger.info(
         f"[green bold]Filter plugins: found {len(plugins)} plugin(s)[/] "
-        f"[yellow]({', '.join(plugins)})", )
+        f"[yellow]({', '.join(plugins)})",
+    )
     return plugins
 
 
@@ -166,18 +176,22 @@ def _find_filters_in_module(module_name):
     filters: list
         The filter classes
     """
-    filters = list()
+    filters = []
 
     mod = import_module(module_name)
-    is_package = hasattr(mod, '__path__')
+    is_package = hasattr(mod, "__path__")
     if is_package:
         for _, name, _ in iter_modules(mod.__path__):
             filters += _find_filters_in_module(f"{mod.__name__}.{name}")
     else:
         try:
             for var in vars(mod).values():
-                if isclass(var) and issubclass(var, AbstractFilter) and \
-                        not isabstract(var) and 'Abstract' not in var.__name__:
+                if (
+                    isclass(var)
+                    and issubclass(var, AbstractFilter)
+                    and not isabstract(var)
+                    and "Abstract" not in var.__name__
+                ):
                     imgfilter = var
                     filters.append(var)
                     imgfilter.init()
@@ -186,7 +200,9 @@ def _find_filters_in_module(module_name):
                         f"- {imgfilter.get_name()}[/] imported."
                     )
         except ImportError as e:
-            logger.error(f"{module_name} submodule cannot be checked for filters !", exc_info=e)
+            logger.error(
+                f"{module_name} submodule cannot be checked for filters !", exc_info=e
+            )
     return filters
 
 
@@ -199,9 +215,11 @@ def _get_all_filters():
     filters: list
         The filter classes
     """
-    filters = list()
+    filters = []
     for module_name in FILTER_PLUGINS:
-        logger.info(f"[green bold]Importing filters from [yellow]{module_name}[/] plugin...")
+        logger.info(
+            f"[green bold]Importing filters from [yellow]{module_name}[/] plugin..."
+        )
         filters.extend(_find_filters_in_module(module_name))
 
     return filters
@@ -214,7 +232,7 @@ FILTER_PLUGINS = _discover_filter_plugins()
 FILTERS = {f.get_identifier(): f for f in _get_all_filters()}
 
 # Add aliases
-_aliases = dict()
+_aliases = {}
 for f in FILTERS.values():
     _aliases.update({alias: f for alias in f.get_aliases()})
 FILTERS.update(_aliases)
