@@ -11,10 +11,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
+
+# pylint: disable=unused-argument
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -30,13 +31,19 @@ class AbstractReader(ABC):
     """
     Base reader. All format readers must extend this class.
     """
+
     def __init__(self, format: AbstractFormat):
         self.format = format
 
     @abstractmethod
     def read_thumb(
-        self, out_width: int, out_height: int, precomputed: bool = None,
-        c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None, t: Optional[int] = None
+        self,
+        out_width: int,
+        out_height: int,
+        precomputed: bool = None,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get an image thumbnail whose dimensions are the nearest possible to
@@ -87,8 +94,13 @@ class AbstractReader(ABC):
 
     @abstractmethod
     def read_window(
-        self, region: Region, out_width: int, out_height: int,
-        c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None, t: Optional[int] = None
+        self,
+        region: Region,
+        out_width: int,
+        out_height: int,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get an image window whose output dimensions are the nearest possible to
@@ -140,8 +152,11 @@ class AbstractReader(ABC):
 
     @abstractmethod
     def read_tile(
-        self, tile: Tile,
-        c: Optional[Union[int, List[int]]] = None, z: Optional[int] = None, t: Optional[int] = None
+        self,
+        tile: Tile,
+        c: Optional[Union[int, List[int]]] = None,
+        z: Optional[int] = None,
+        t: Optional[int] = None,
     ) -> RawImagePixels:
         """
         Get an image tile. It is a particular case of `read_window` where the

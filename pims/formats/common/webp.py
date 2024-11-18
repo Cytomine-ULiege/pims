@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 from typing import Optional
 
@@ -20,10 +21,7 @@ from pims.cache import cached_property
 from pims.formats import AbstractFormat
 from pims.formats.utils.abstract import CachedDataPath
 from pims.formats.utils.checker import SignatureChecker
-from pims.formats.utils.engines.vips import (
-    VipsParser, VipsReader,
-    VipsSpatialConvertor
-)
+from pims.formats.utils.engines.vips import VipsParser, VipsReader, VipsSpatialConvertor
 from pims.formats.utils.histogram import DefaultHistogramReader
 from pims.formats.utils.structures.metadata import ImageMetadata
 from pims.utils import UNIT_REGISTRY
@@ -36,17 +34,19 @@ class WebPChecker(SignatureChecker):
     @classmethod
     def match(cls, pathlike: CachedDataPath) -> bool:
         buf = cls.get_signature(pathlike)
-        return (len(buf) > 13 and
-                buf[0] == 0x52 and
-                buf[1] == 0x49 and
-                buf[2] == 0x46 and
-                buf[3] == 0x46 and
-                buf[8] == 0x57 and
-                buf[9] == 0x45 and
-                buf[10] == 0x42 and
-                buf[11] == 0x50 and
-                buf[12] == 0x56 and
-                buf[13] == 0x50)
+        return (
+            len(buf) > 13
+            and buf[0] == 0x52
+            and buf[1] == 0x49
+            and buf[2] == 0x46
+            and buf[3] == 0x46
+            and buf[8] == 0x57
+            and buf[9] == 0x45
+            and buf[10] == 0x42
+            and buf[11] == 0x50
+            and buf[12] == 0x56
+            and buf[13] == 0x50
+        )
 
 
 class WebPParser(VipsParser):
@@ -66,18 +66,20 @@ class WebPParser(VipsParser):
         imd.description = raw.get_first_value(desc_fields)
 
         date_fields = (
-            "RIFF.DateTimeOriginal", "EXIF.CreationDate", "EXIF.DateTimeOriginal",
-            "EXIF.ModifyDate"
+            "RIFF.DateTimeOriginal",
+            "EXIF.CreationDate",
+            "EXIF.DateTimeOriginal",
+            "EXIF.ModifyDate",
         )
         imd.acquisition_datetime = parse_datetime(raw.get_first_value(date_fields))
 
         imd.physical_size_x = self.parse_physical_size(
             raw.get_value("EXIF.XResolution"),
-            raw.get_value("EXIF.ResolutionUnit")
+            raw.get_value("EXIF.ResolutionUnit"),
         )
         imd.physical_size_y = self.parse_physical_size(
             raw.get_value("EXIF.YResolution"),
-            raw.get_value("EXIF.ResolutionUnit")
+            raw.get_value("EXIF.ResolutionUnit"),
         )
 
         if imd.duration > 1:

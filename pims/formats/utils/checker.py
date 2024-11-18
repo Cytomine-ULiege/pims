@@ -11,7 +11,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -29,14 +28,14 @@ class AbstractChecker(ABC):
     @abstractmethod
     def match(cls, pathlike: CachedDataPath) -> bool:
         """Whether the path is in this format or not."""
-        pass
 
 
 class SignatureChecker(AbstractChecker, ABC):
     """
     Base signature checker. Add helper to get file signature.
     """
+
     @classmethod
     def get_signature(cls, pathlike: CachedDataPath) -> bytearray:
         """Get cached file signature"""
-        return pathlike.get_cached('signature', pathlike.path.signature)
+        return pathlike.get_cached("signature", pathlike.path.signature)

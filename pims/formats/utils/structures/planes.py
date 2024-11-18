@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Any, List, Optional
 
 import numpy as np
@@ -22,9 +23,12 @@ class PlanesInfo:
     """
 
     def __init__(
-        self, n_channels: int, depth: int, duration: int,
+        self,
+        n_channels: int,
+        depth: int,
+        duration: int,
         keys: Optional[List[str]] = None,
-        value_datatypes: Optional[List] = None
+        value_datatypes: Optional[List] = None,
     ):
         """
         Initializer.
@@ -56,7 +60,7 @@ class PlanesInfo:
     def _init_data(self, keys: List[str], formats: List[np.dtype]):
         return np.zeros(
             (self.n_channels, self.depth, self.duration),
-            dtype={'names': keys, 'formats': formats}
+            dtype={"names": keys, "formats": formats},
         )
 
     @property

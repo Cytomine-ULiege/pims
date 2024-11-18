@@ -11,10 +11,14 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from pims.cache import cached_property
 
+from pims.cache import cached_property
 from pims.formats.utils.abstract import AbstractFormat, CachedDataPath
-from pims.formats.utils.engines.tifffile import TifffileChecker, TifffileParser, cached_tifffile
+from pims.formats.utils.engines.tifffile import (
+    TifffileChecker,
+    TifffileParser,
+    cached_tifffile,
+)
 from pims.formats.utils.engines.vips import VipsReader, VipsSpatialConvertor
 from pims.formats.utils.histogram import DefaultHistogramReader
 from pims.formats.utils.structures.metadata import ImageMetadata, MetadataStore
@@ -44,16 +48,16 @@ class OlympusSisParser(TifffileParser):
         imd = super().parse_known_metadata()
         sis_metadata = self._parsed_sis_metadata
 
-        imd.acquisition_datetime = sis_metadata.get('datetime')
-        
-        physical_size_x = sis_metadata.get('pixelsizex')
-        if physical_size_x is not None and physical_size_x > 0:
-            imd.physical_size_x = physical_size_x * UNIT_REGISTRY('meters')
-        physical_size_y = sis_metadata.get('pixelsizey')
-        if physical_size_y is not None and physical_size_y > 0:
-            imd.physical_size_y = physical_size_y * UNIT_REGISTRY('meters')
+        imd.acquisition_datetime = sis_metadata.get("datetime")
 
-        imd.objective.nominal_magnification = sis_metadata.get('magnification')
+        physical_size_x = sis_metadata.get("pixelsizex")
+        if physical_size_x is not None and physical_size_x > 0:
+            imd.physical_size_x = physical_size_x * UNIT_REGISTRY("meters")
+        physical_size_y = sis_metadata.get("pixelsizey")
+        if physical_size_y is not None and physical_size_y > 0:
+            imd.physical_size_y = physical_size_y * UNIT_REGISTRY("meters")
+
+        imd.objective.nominal_magnification = sis_metadata.get("magnification")
         return imd
 
     def parse_raw_metadata(self) -> MetadataStore:
@@ -72,6 +76,7 @@ class OlympusSisFormat(AbstractFormat):
     Known limitations:
     * Do not consider images with depth, time or several bands (except rgb)
     """
+
     checker_class = OlympusSisChecker
     parser_class = OlympusSisParser
     reader_class = VipsReader

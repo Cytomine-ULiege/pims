@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 from typing import Optional
 
@@ -20,7 +21,9 @@ from pims.cache import cached_property
 from pims.formats import AbstractFormat
 from pims.formats.utils.checker import SignatureChecker
 from pims.formats.utils.engines.pil import (
-    PillowParser, PillowSpatialConvertor, SimplePillowReader
+    PillowParser,
+    PillowSpatialConvertor,
+    SimplePillowReader,
 )
 from pims.formats.utils.histogram import DefaultHistogramReader
 from pims.formats.utils.structures.metadata import ImageMetadata
@@ -35,13 +38,11 @@ class BMPChecker(SignatureChecker):
     @classmethod
     def match(cls, pathlike):
         buf = cls.get_signature(pathlike)
-        return (len(buf) > 1 and
-                buf[0] == 0x42 and
-                buf[1] == 0x4D)
+        return len(buf) > 1 and buf[0] == 0x42 and buf[1] == 0x4D
 
 
 class BMPParser(PillowParser):
-    FORMAT_SLUG = 'BMP'
+    FORMAT_SLUG = "BMP"
 
     def parse_known_metadata(self) -> ImageMetadata:
         # Tags reference: https://exiftool.org/TagNames/BMP.html
@@ -50,8 +51,12 @@ class BMPParser(PillowParser):
 
         imd.description = raw.get_value("File.Comment")
         imd.acquisition_datetime = self.format.path.creation_datetime
-        imd.physical_size_x = self.parse_physical_size(raw.get_value("File.PixelsPerMeterX"))
-        imd.physical_size_y = self.parse_physical_size(raw.get_value("File.PixelsPerMeterY"))
+        imd.physical_size_x = self.parse_physical_size(
+            raw.get_value("File.PixelsPerMeterX")
+        )
+        imd.physical_size_y = self.parse_physical_size(
+            raw.get_value("File.PixelsPerMeterY")
+        )
         imd.is_complete = True
         return imd
 
@@ -65,7 +70,7 @@ class BMPParser(PillowParser):
 
 
 class BMPReader(SimplePillowReader):
-    FORMAT_SLUG = 'BMP'
+    FORMAT_SLUG = "BMP"
 
 
 class BMPFormat(AbstractFormat):
@@ -86,6 +91,7 @@ class BMPFormat(AbstractFormat):
     def init(cls):
         # https://github.com/python-pillow/Pillow/issues/5036
         from PIL import BmpImagePlugin
+
         assert BmpImagePlugin
 
     def __init__(self, *args, **kwargs):

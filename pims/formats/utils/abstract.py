@@ -11,12 +11,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 import logging
 import re
 from abc import ABC
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from pims.cache import SimpleDataCache, cached_property
 from pims.formats.utils.checker import AbstractChecker
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("pims.formats")
 
-_CAMEL_TO_SPACE_PATTERN = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
+_CAMEL_TO_SPACE_PATTERN = re.compile(r"((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))")
 
 
 class CachedDataPath(SimpleDataCache):
@@ -47,6 +46,7 @@ class CachedDataPath(SimpleDataCache):
     have an attribute `cache`. However, both solutions are impossible because they
     cause circular imports.
     """
+
     def __init__(self, path: Path):
         super().__init__()
         self.path = path
@@ -56,6 +56,7 @@ class AbstractFormat(ABC, SimpleDataCache):
     """
     Base format. All image formats must extend this class.
     """
+
     checker_class: Type[AbstractChecker] = None
     parser_class: Type[AbstractParser] = None
     reader_class: Type[AbstractReader] = None
@@ -79,7 +80,7 @@ class AbstractFormat(ABC, SimpleDataCache):
             (format identification) that can be used again in parser or reader.
         """
         self._path = path
-        super(AbstractFormat, self).__init__(existing_cache)
+        super().__init__(existing_cache)
 
         self._enabled = False
 
@@ -94,14 +95,13 @@ class AbstractFormat(ABC, SimpleDataCache):
         """
         Initialize the format, such that all third-party libs are ready.
         """
-        pass
 
     @classmethod
     def _get_identifier(cls):
         """
         Get the format identifier. It must be unique across all formats.
         """
-        return cls.__name__.replace('Format', '')
+        return cls.__name__.replace("Format", "")
 
     @classmethod
     def get_identifier(cls, uppercase: bool = True) -> str:
@@ -127,7 +127,7 @@ class AbstractFormat(ABC, SimpleDataCache):
     @classmethod
     def get_name(cls) -> str:
         """Get the format name in a human-readable way."""
-        return re.sub(_CAMEL_TO_SPACE_PATTERN, r' \1', cls.get_identifier(False))
+        return re.sub(_CAMEL_TO_SPACE_PATTERN, r" \1", cls.get_identifier(False))
 
     @classmethod
     def get_remarks(cls) -> str:
@@ -137,7 +137,7 @@ class AbstractFormat(ABC, SimpleDataCache):
     @classmethod
     def get_plugin_name(cls) -> str:
         """Get PIMS format plugin name adding this format."""
-        return '.'.join(cls.__module__.split('.')[:-1])
+        return ".".join(cls.__module__.split(".")[:-1])
 
     @classmethod
     def is_readable(cls) -> bool:
@@ -188,11 +188,11 @@ class AbstractFormat(ABC, SimpleDataCache):
         return False
 
     @classmethod
-    def from_proxy(cls, cached_path: CachedDataPath) -> AbstractFormat:
+    def from_proxy(cls, cached_path: CachedDataPath) -> "AbstractFormat":
         return cls(path=cached_path.path, existing_cache=cached_path.cache)
 
     @classmethod
-    def from_path(cls, path: Path) -> AbstractFormat:
+    def from_path(cls, path: Path) -> "AbstractFormat":
         return cls(path=path)
 
     @property
@@ -221,15 +221,14 @@ class AbstractFormat(ABC, SimpleDataCache):
         """
         return True
 
-    def conversion_format(self) -> Optional[Type[AbstractFormat]]:
+    def conversion_format(self) -> Optional[Type["AbstractFormat"]]:
         """
         Get the format to which the image in this format will be converted,
         if needed.
         """
         if self.convertor:
             return self.convertor.conversion_format()
-        else:
-            return None
+        return None
 
     def convert(self, dest_path: Path) -> bool:
         """
@@ -243,8 +242,7 @@ class AbstractFormat(ABC, SimpleDataCache):
         """
         if self.convertor:
             return self.convertor.convert(dest_path)
-        else:
-            raise NotImplementedError()
+        raise NotImplementedError()
 
     # Metadata parsing
 

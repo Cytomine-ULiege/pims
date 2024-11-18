@@ -11,20 +11,20 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
-    from pims.formats import AbstractFormat
     from pims.files.file import Path
+    from pims.formats import AbstractFormat
 
 
 class AbstractConvertor(ABC):
     """
     Base convertor. All convertors must extend this class.
     """
+
     def __init__(self, source: AbstractFormat):
         """
         Initializer.

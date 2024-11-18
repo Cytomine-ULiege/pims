@@ -94,14 +94,17 @@ class Metadata:
         Try to infer the metadata type from the metadata value.
         """
         for mt in MetadataType:
-            if type(self._value) == mt.python_type:
+            if isinstance(self._value, mt.python_type):
                 return mt
         return MetadataType.UNKNOWN
 
     def __eq__(self, o: object) -> bool:
-        return isinstance(o, Metadata) and self.key == o.key \
-               and self.value == o.value \
-               and self.namespace == o.namespace
+        return (
+            isinstance(o, Metadata)
+            and self.key == o.key
+            and self.value == o.value
+            and self.namespace == o.namespace
+        )
 
     def __str__(self) -> str:
         return f"{self.namespaced_key}={str(self.value)} ({self.metadata_type.name})"
@@ -119,15 +122,17 @@ class MetadataStore:
     """
 
     def __init__(self):
-        self._namedstores = dict()
+        self._namedstores = {}
 
     @staticmethod
     def _split_namespaced_key(namespaced_key: str) -> Tuple[str, str]:
         """Split namespace and the rest from a key"""
-        split = namespaced_key.split('.', 1)
+        split = namespaced_key.split(".", 1)
         return ("", namespaced_key) if len(split) < 2 else split
 
-    def set(self, namespaced_key: str, value: Any, namespace: Optional[str] = None) -> None:
+    def set(
+        self, namespaced_key: str, value: Any, namespace: Optional[str] = None
+    ) -> None:
         """
         Set a metadata in the store.
 
@@ -145,7 +150,7 @@ class MetadataStore:
             namespaced_key = f"{namespace}.{namespaced_key}"
         namespace, key = self._split_namespaced_key(namespaced_key)
         metadata = Metadata(key, value, namespace)
-        store = self._namedstores.get(metadata.namespace, dict())
+        store = self._namedstores.get(metadata.namespace, {})
         store[key] = metadata
         self._namedstores[metadata.namespace] = store
 
@@ -168,7 +173,9 @@ class MetadataStore:
             return metadata.value
         return default
 
-    def get_first_value(self, namespaced_keys: Sequence[str], default: Any = None) -> Any:
+    def get_first_value(
+        self, namespaced_keys: Sequence[str], default: Any = None
+    ) -> Any:
         """Get the first non-null metadata value in the list of metadata keys"""
         for namespaced_key in namespaced_keys:
             metadata = self.get(namespaced_key, None)
@@ -184,7 +191,7 @@ class MetadataStore:
         return default
 
     @staticmethod
-    def _flatten(d, parent_key='', sep='.'):
+    def _flatten(d, parent_key="", sep="."):
         return flatten(d, parent_key, sep)
 
     def flatten(self):
@@ -200,7 +207,7 @@ class MetadataStore:
         return self.flatten().values()
 
     def __contains__(self, o: object) -> bool:
-        if type(o) == Metadata:
+        if isinstance(o, Metadata):
             return self.get(o.namespaced_key) is not None
         return o in self._namedstores
 
@@ -219,6 +226,7 @@ class MetadataStore:
 
 class _MetadataStorable:
     """An interface to convert a class to a metadata store"""
+
     def metadata_namespace(self) -> str:
         return ""
 
@@ -228,9 +236,9 @@ class _MetadataStorable:
         Object variables starting with `_` are ignored.
         """
         keys = ()
-        if hasattr(self, '__slots__'):
+        if hasattr(self, "__slots__"):
             keys += self.__slots__
-        if hasattr(self, '__dict__'):
+        if hasattr(self, "__dict__"):
             keys += tuple(self.__dict__.keys())
 
         for key in keys:
@@ -243,10 +251,7 @@ class _MetadataStorable:
                 elif issubclass(type(value), _MetadataStorable):
                     value.to_metadata_store(store)
                 elif value is not None:
-                    store.set(
-                        key, value,
-                        namespace=self.metadata_namespace()
-                    )
+                    store.set(key, value, namespace=self.metadata_namespace())
         return store
 
 
@@ -257,14 +262,20 @@ class ImageChannel(_MetadataStorable):
     suggested_name: Optional[str]
 
     __slots__ = (
-        'emission_wavelength', 'excitation_wavelength', 'index',
-        'suggested_name', '_color'
+        "emission_wavelength",
+        "excitation_wavelength",
+        "index",
+        "suggested_name",
+        "_color",
     )
 
     def __init__(
-        self, index: int, emission_wavelength: Optional[float] = None,
-        excitation_wavelength: Optional[float] = None, suggested_name: Optional[str] = None,
-        color: Optional[Color] = None
+        self,
+        index: int,
+        emission_wavelength: Optional[float] = None,
+        excitation_wavelength: Optional[float] = None,
+        suggested_name: Optional[str] = None,
+        color: Optional[Color] = None,
     ):
         self.emission_wavelength = emission_wavelength
         self.excitation_wavelength = excitation_wavelength
@@ -302,7 +313,7 @@ class ImageObjective(_MetadataStorable):
     nominal_magnification: Optional[float]
     calibrated_magnification: Optional[float]
 
-    __slots__ = ('nominal_magnification', 'calibrated_magnification')
+    __slots__ = ("nominal_magnification", "calibrated_magnification")
 
     def __init__(self):
         self.nominal_magnification = None
@@ -315,7 +326,7 @@ class ImageObjective(_MetadataStorable):
 class ImageMicroscope(_MetadataStorable):
     model: Optional[str]
 
-    __slots__ = ('model',)
+    __slots__ = ("model",)
 
     def __init__(self):
         self.model = None
@@ -329,7 +340,7 @@ class ImageAssociated(_MetadataStorable):
     height: Optional[int]
     width: Optional[int]
 
-    __slots__ = ('n_channels', 'height', 'width', '_kind')
+    __slots__ = ("n_channels", "height", "width", "_kind")
 
     def __init__(self, kind: str):
         self.width = None
@@ -339,9 +350,11 @@ class ImageAssociated(_MetadataStorable):
 
     @property
     def exists(self) -> bool:
-        return self.width is not None and \
-               self.height is not None and \
-               self.n_channels is not None
+        return (
+            self.width is not None
+            and self.height is not None
+            and self.n_channels is not None
+        )
 
     def metadata_namespace(self) -> str:
         return f"associated.{self._kind}"
@@ -349,6 +362,7 @@ class ImageAssociated(_MetadataStorable):
 
 class ImageMetadata(_MetadataStorable):
     """Wrapper on parsed image metadata"""
+
     width: int
     height: int
     depth: int
@@ -372,12 +386,26 @@ class ImageMetadata(_MetadataStorable):
     associated_macro: ImageAssociated
 
     __slots__ = (
-        'width', 'height', 'duration', 'n_concrete_channels',
-        'n_samples', 'n_distinct_channels', 'pixel_type',
-        'significant_bits', 'physical_size_x', 'physical_size_y',
-        'physical_size_z', 'frame_rate', 'acquisition_datetime',
-        'description', 'channels', 'objective', 'microscope',
-        'associated_thumb', 'associated_label', 'associated_macro'
+        "width",
+        "height",
+        "duration",
+        "n_concrete_channels",
+        "n_samples",
+        "n_distinct_channels",
+        "pixel_type",
+        "significant_bits",
+        "physical_size_x",
+        "physical_size_y",
+        "physical_size_z",
+        "frame_rate",
+        "acquisition_datetime",
+        "description",
+        "channels",
+        "objective",
+        "microscope",
+        "associated_thumb",
+        "associated_label",
+        "associated_macro",
     )
 
     def __init__(self):
@@ -391,7 +419,7 @@ class ImageMetadata(_MetadataStorable):
         self.n_samples = 1
         self.n_distinct_channels = 1
 
-        self.pixel_type = np.dtype('uint8')
+        self.pixel_type = np.dtype("uint8")
         self.significant_bits = 8
 
         self.physical_size_x = None
@@ -402,12 +430,12 @@ class ImageMetadata(_MetadataStorable):
         self.acquisition_datetime = None
         self.description = None
 
-        self.channels = list()
+        self.channels = []
         self.objective = ImageObjective()
         self.microscope = ImageMicroscope()
-        self.associated_thumb = ImageAssociated('thumb')
-        self.associated_label = ImageAssociated('label')
-        self.associated_macro = ImageAssociated('macro')
+        self.associated_thumb = ImageAssociated("thumb")
+        self.associated_label = ImageAssociated("label")
+        self.associated_macro = ImageAssociated("macro")
 
     def set_channel(self, channel):
         self.channels.insert(channel.index, channel)

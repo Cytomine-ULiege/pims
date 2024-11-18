@@ -11,13 +11,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import logging
 from operator import itemgetter
 from typing import Any, List, Optional, Union
 
 import numpy as np
 import pyvips.enums
-from pyvips import Image as VIPSImage, Size as VIPSSize  # noqa
+from pyvips import Image as VIPSImage  # noqa
+from pyvips import Size as VIPSSize
 from pyvips.error import Error as VIPSError
 
 from pims.api.exceptions import MetadataParsingProblem
@@ -26,25 +28,24 @@ from pims.formats.utils.convertor import AbstractConvertor
 from pims.formats.utils.engines.exiftool import ExifToolParser
 from pims.formats.utils.parser import AbstractParser
 from pims.formats.utils.reader import AbstractReader
-from pims.formats.utils.structures.metadata import ImageChannel, ImageMetadata, MetadataStore
+from pims.formats.utils.structures.metadata import (
+    ImageChannel,
+    ImageMetadata,
+    MetadataStore,
+)
 from pims.processing.region import Region, Tile
 from pims.utils.dtypes import dtype_to_bits
-from pims.utils.vips import (
-    vips_format_to_dtype,
-    vips_interpretation_to_mode
-)
+from pims.utils.vips import vips_format_to_dtype, vips_interpretation_to_mode
 
 log = logging.getLogger("pims.formats")
 
 
 def cached_vips_file(format: AbstractFormat) -> VIPSImage:
     """Get cached vips object for the image format."""
-    return format.get_cached('_vips', VIPSImage.new_from_file, str(format.path))
+    return format.get_cached("_vips", VIPSImage.new_from_file, str(format.path))
 
 
-def get_vips_field(
-    vips_image: VIPSImage, field: str, default: Any = None
-) -> Any:
+def get_vips_field(vips_image: VIPSImage, field: str, default: Any = None) -> Any:
     try:
         return vips_image.get_value(field)
     except VIPSError:
@@ -52,7 +53,7 @@ def get_vips_field(
 
 
 class VipsParser(ExifToolParser, AbstractParser):
-    ALLOWED_MODES = ('L', 'RGB')
+    ALLOWED_MODES = ("L", "RGB")
 
     def parse_main_metadata(self) -> ImageMetadata:
         image = cached_vips_file(self.format)
@@ -73,7 +74,7 @@ class VipsParser(ExifToolParser, AbstractParser):
             for i, name in enumerate(mode):
                 imd.set_channel(ImageChannel(index=i, suggested_name=name))
         else:
-            log.error(f"{self.format.path}: Mode {mode} is not supported.")
+            log.error("%s: Mode %s is not supported.", self.format.path, mode)
             raise MetadataParsingProblem(self.format.path)
 
         return imd
@@ -92,49 +93,51 @@ class VipsReader(AbstractReader):
     def vips_filename_with_options(filename: str, **options) -> str:
         """Create filename with options as expected by vips."""
         if len(options) > 0:
-            opt_string = ','.join(f"{k}={v}" for (k, v) in options.items())
-            opt_string = '[' + opt_string + ']'
+            opt_string = ",".join(f"{k}={v}" for (k, v) in options.items())
+            opt_string = "[" + opt_string + "]"
             return filename + opt_string
         return filename
 
     @staticmethod
-    def _extract_channels(im: VIPSImage, c: Optional[Union[int, List[int]]]) -> VIPSImage:
+    def _extract_channels(
+        im: VIPSImage,
+        c: Optional[Union[int, List[int]]],
+    ) -> VIPSImage:
         if c is None or im.bands == len(c):
             return im
-        elif type(c) is int or len(c) == 1:
+
+        if isinstance(c, int) or len(c) == 1:
             if len(c) == 1:
                 c = c[0]
             return im.extract_band(c)
-        else:
-            channels = list(itemgetter(*c)(im))
-            im = channels[0].bandjoin(channels[1:])
-            return im
 
-    def vips_thumbnail(
-        self, width: int, height: int, **loader_options
-    ) -> VIPSImage:
+        channels = list(itemgetter(*c)(im))
+        im = channels[0].bandjoin(channels[1:])
+        return im
+
+    def vips_thumbnail(self, width: int, height: int, **loader_options) -> VIPSImage:
         """Get VIPS thumbnail using vips shrink-on-load features."""
 
         filename = self.vips_filename_with_options(
-            str(self.format.path),
-            **loader_options
+            str(self.format.path), **loader_options
         )
 
         image = cached_vips_file(self.format)
         if image.interpretation in ("grey16", "rgb16"):
             # Related to https://github.com/libvips/libvips/issues/1941 ?
             return VIPSImage.thumbnail(
-                filename, width, height=height,
-                size=VIPSSize.FORCE, linear=True
+                filename, width, height=height, size=VIPSSize.FORCE, linear=True
             ).colourspace(image.interpretation)
 
-        return VIPSImage.thumbnail(
-            filename, width, height=height, size=VIPSSize.FORCE
-        )
+        return VIPSImage.thumbnail(filename, width, height=height, size=VIPSSize.FORCE)
 
     def read_thumb(
-        self, out_width: int, out_height: int, precomputed: bool = False,
-        c: Optional[Union[int, List[int]]] = None, **other
+        self,
+        out_width: int,
+        out_height: int,
+        precomputed: bool = False,
+        c: Optional[Union[int, List[int]]] = None,
+        **other,
     ) -> VIPSImage:
         im = self.vips_thumbnail(out_width, out_height)
         if im.hasalpha():
@@ -142,8 +145,12 @@ class VipsReader(AbstractReader):
         return self._extract_channels(im, c)
 
     def read_window(
-        self, region: Region, out_width: int, out_height: int,
-        c: Optional[Union[int, List[int]]] = None, **other
+        self,
+        region: Region,
+        out_width: int,
+        out_height: int,
+        c: Optional[Union[int, List[int]]] = None,
+        **other,
     ) -> VIPSImage:
         image = cached_vips_file(self.format)
         region = region.scale_to_tier(self.format.pyramid.base)
@@ -155,9 +162,7 @@ class VipsReader(AbstractReader):
     def read_tile(
         self, tile: Tile, c: Optional[Union[int, List[int]]] = None, **other
     ) -> VIPSImage:
-        return self.read_window(
-            tile, int(tile.width), int(tile.height), c, **other
-        )
+        return self.read_window(tile, int(tile.width), int(tile.height), c, **other)
 
 
 # [HISTOGRAM REFACTORING] Not used in practice ? to delete ?
@@ -228,17 +233,23 @@ class VipsSpatialConvertor(AbstractConvertor):
 
     def conversion_format(self):
         from pims.formats.common.tiff import PyrTiffFormat
+
         return PyrTiffFormat
 
     def convert(self, dest_path):
         source = self.vips_source()
 
         result = source.tiffsave(
-            str(dest_path), pyramid=True, tile=True,
-            tile_width=256, tile_height=256, bigtiff=True,
-            properties=False, strip=True,
+            str(dest_path),
+            pyramid=True,
+            tile=True,
+            tile_width=256,
+            tile_height=256,
+            bigtiff=True,
+            properties=False,
+            strip=True,
             depth=pyvips.enums.ForeignDzDepth.ONETILE,
             compression=pyvips.enums.ForeignTiffCompression.LZW,
-            region_shrink=pyvips.enums.RegionShrink.MEAN
+            region_shrink=pyvips.enums.RegionShrink.MEAN,
         )
         return not bool(result)

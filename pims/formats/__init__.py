@@ -12,20 +12,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from functools import partial
+import csv
 import logging
+import os
+from functools import partial
 from importlib import import_module
 from inspect import isabstract, isclass
 from pkgutil import iter_modules
-
 from types import ModuleType
 from typing import Dict, List, Type, Union
-from pims.config import get_settings
-import csv
-import os
 
 from importlib_metadata import EntryPoint, entry_points  # noqa
 
+from pims.config import get_settings
 from pims.formats.utils.abstract import AbstractFormat
 
 FORMAT_PLUGIN_PREFIX = "pims_format_"
@@ -41,7 +40,10 @@ def custom_sort_key(item, dictionary):
 
 
 def reorder_plugins(
-    plugin_list, csv_path, name_column="name", resolution_order_column="resolution_order"
+    plugin_list,
+    csv_path,
+    name_column="name",
+    resolution_order_column="resolution_order",
 ):
     plugin_resolution_orders = {}
 
@@ -58,7 +60,7 @@ def reorder_plugins(
 
             if plugin_name is not None and resolution_order is not None:
                 plugin_resolution_orders[plugin_name] = resolution_order
-                
+
     sorted_plugin_list = sorted(
         plugin_list, key=partial(custom_sort_key, dictionary=plugin_resolution_orders)
     )

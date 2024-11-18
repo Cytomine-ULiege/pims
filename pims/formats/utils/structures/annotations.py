@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Any, Dict, List, Optional, Union
 
 from shapely.geometry.base import BaseGeometry
@@ -25,10 +26,15 @@ class ParsedMetadataAnnotation:
     Parsed annotation from an image format metadata.
     This is NOT an input annotation.
     """
+
     def __init__(
-        self, geometry: BaseGeometry, c: PlaneIndex, z: PlaneIndex, t: PlaneIndex,
+        self,
+        geometry: BaseGeometry,
+        c: PlaneIndex,
+        z: PlaneIndex,
+        t: PlaneIndex,
         terms: Optional[List[str]] = None,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize an annotation from image metadata.
@@ -59,7 +65,7 @@ class ParsedMetadataAnnotation:
         self.terms = terms
 
         if properties is None:
-            properties = dict()
+            properties = {}
         self.properties = properties
 
     @property
@@ -76,5 +82,5 @@ class ParsedMetadataAnnotation:
         else:
             i = 1
             while f"{key}.{i}" in self.properties.keys():
-                i = i+1
+                i = i + 1
             self.properties[f"{key}.{i}"] = value
