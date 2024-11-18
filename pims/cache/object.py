@@ -11,6 +11,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=invalid-name
+
 import copy
 from functools import cached_property as _cached_property
 from typing import Any, Callable, Dict, KeysView, Union
@@ -27,7 +30,7 @@ class cached_property:  # noqa
     These cached properties are not thread-safe.
     """
 
-    __slots__ = ('func', '__dict__')
+    __slots__ = ("func", "__dict__")
 
     def __init__(self, func):
         """Initialize instance from decorated function."""
@@ -43,7 +46,7 @@ class cached_property:  # noqa
         try:
             value = self.func(instance)
         except AttributeError as exc:
-            raise RuntimeError(exc)
+            raise RuntimeError(exc) from exc
         if value is NotImplemented:
             return getattr(super(owner, instance), self.func.__name__)
         setattr(instance, self.func.__name__, value)
@@ -57,8 +60,9 @@ class SimpleDataCache(SafelyCopiable):
     """
     A simple wrapper to add caching mechanisms to a class.
     """
+
     def __init__(self, existing_cache: DictCache = None):
-        self._cache = dict()
+        self._cache = {}
 
         if existing_cache is dict:
             self._cache = copy.deepcopy(existing_cache)
@@ -97,8 +101,11 @@ class SimpleDataCache(SafelyCopiable):
         self.cache_value(key, delayed_func(*args, **kwargs))
 
     def get_cached(
-        self, key: str, delayed_func_or_value: Union[Callable, Any],
-        *args, **kwargs
+        self,
+        key: str,
+        delayed_func_or_value: Union[Callable, Any],
+        *args,
+        **kwargs,
     ) -> Any:
         """
         Get cache content at given key, otherwise cache new content for this key.

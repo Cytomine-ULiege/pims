@@ -42,15 +42,13 @@ def _hashable_dict(d: dict, separator: str = ":"):
     for k, v in d.items():
         if isinstance(v, Enum):
             v = v.value
-        elif type(v) == dict:
+        elif isinstance(v, dict):
             v = _hashable_dict(v, separator)
         hashable += f"{separator}{k}={str(v)}"
     return hashable
 
 
-def all_kwargs_key_builder(
-    func, kwargs, excluded_parameters, prefix
-):
+def all_kwargs_key_builder(func, kwargs, excluded_parameters, prefix):
     copy_kwargs = kwargs.copy()
     if excluded_parameters is None:
         excluded_parameters = []
@@ -58,36 +56,37 @@ def all_kwargs_key_builder(
         if excluded in copy_kwargs:
             copy_kwargs.pop(excluded)
 
-    hashable = f"{func.__module__}:{func.__name__}" \
-               f"{_hashable_dict(copy_kwargs, ':')}"
+    hashable = f"{func.__module__}:{func.__name__}{_hashable_dict(copy_kwargs, ':')}"
     hashed = hashlib.md5(hashable.encode()).hexdigest()
     cache_key = f"{prefix}:{hashed}"
     return cache_key
 
 
 def _image_response_key_builder(
-    func, kwargs, excluded_parameters, prefix, supported_mimetypes
+    func,
+    kwargs,
+    excluded_parameters,
+    prefix,
+    supported_mimetypes,
 ):
     copy_kwargs = kwargs.copy()
-    headers = copy_kwargs.get('headers')
-    if headers and 'headers' not in excluded_parameters:
+    headers = copy_kwargs.get("headers")
+    if headers and "headers" not in excluded_parameters:
         # Find true output extension
-        accept = headers.get('accept')
-        extension = copy_kwargs.get('extension')
+        accept = headers.get("accept")
+        extension = copy_kwargs.get("extension")
         format, _ = get_output_format(extension, accept, supported_mimetypes)
-        copy_kwargs['extension'] = format
+        copy_kwargs["extension"] = format
 
         # Extract other custom headers
-        extra_headers = ('safe_mode', 'annotation_origin')
+        extra_headers = ("safe_mode", "annotation_origin")
         for eh in extra_headers:
             v = headers.get(eh)
             if v:
                 copy_kwargs[f"headers.{eh}"] = v
-        del copy_kwargs['headers']
+        del copy_kwargs["headers"]
 
-    return all_kwargs_key_builder(
-        func, copy_kwargs, excluded_parameters, prefix
-    )
+    return all_kwargs_key_builder(func, copy_kwargs, excluded_parameters, prefix)
 
 
 class Codec:
@@ -116,7 +115,7 @@ class RedisBackend:
 
     async def get_with_ttl(self, key: str) -> Tuple[int, str]:
         async with self.redis.pipeline(transaction=True) as pipe:
-            return await (pipe.ttl(key).get(key).execute())
+            return await pipe.ttl(key).get(key).execute()
 
     async def get(self, key) -> str:
         return await self.redis.get(key)
@@ -126,11 +125,14 @@ class RedisBackend:
 
     async def clear(self, namespace: str = None, key: str = None) -> int:
         if namespace:
-            lua = f"for i, name in ipairs(redis.call('KEYS', '{namespace}:*')) " \
-                  f"do redis.call('DEL', name); " \
-                  f"end"
+            lua = (
+                f"for i, name in ipairs(redis.call('KEYS', '{namespace}:*')) "
+                f"do redis.call('DEL', name); "
+                f"end"
+            )
             return await self.redis.eval(lua, numkeys=0)
-        elif key:
+
+        if key:
             return await self.redis.delete(key)
 
     async def exists(self, key) -> bool:
@@ -147,9 +149,7 @@ class PIMSCache:
     _key_builder = None
 
     @classmethod
-    async def init(
-        cls, backend, prefix: str = "", expire: int = None
-    ):
+    async def init(cls, backend, prefix: str = "", expire: int = None):
         if cls._init:
             return
         cls._init = True
@@ -207,14 +207,15 @@ async def startup_cache(pims_version):
         return
 
     await PIMSCache.init(
-        RedisBackend(settings.cache_url), prefix="pims-cache",
+        RedisBackend(settings.cache_url),
+        prefix="pims-cache",
     )
 
     # Flush the cache if persistent and PIMS version has changed.
     cache = PIMSCache.get_cache()  # noqa
     cached_version = await cache.get(CACHE_KEY_PIMS_VERSION)
     if cached_version is not None:
-        cached_version = cached_version.decode('utf-8')
+        cached_version = cached_version.decode("utf-8")
     if cached_version != pims_version:
         await cache.clear(PIMSCache.get_prefix())
         await cache.set(CACHE_KEY_PIMS_VERSION, pims_version)
@@ -231,7 +232,7 @@ def default_cache_control_builder(ttl=0):
     params = ["private", "must-revalidate"]
     if ttl:
         params += [f"max-age={ttl}"]
-    return ','.join(params)
+    return ",".join(params)
 
 
 def cache_data(
@@ -239,7 +240,7 @@ def cache_data(
     vary: Optional[List] = None,
     codec: Type[Codec] = None,
     key_builder: Callable = None,
-    cache_control_builder: Callable = None
+    cache_control_builder: Callable = None,
 ):
     def wrapper(func: Callable):
         @wraps(func)
@@ -256,8 +257,9 @@ def cache_data(
             request = all_kwargs.pop("request", None)
             response = all_kwargs.pop("response", None)
 
-            if not PIMSCache.is_enabled() or \
-                    (request and request.headers.get(HEADER_CACHE_CONTROL) == "no-store"):
+            if not PIMSCache.is_enabled() or (
+                request and request.headers.get(HEADER_CACHE_CONTROL) == "no-store"
+            ):
                 return await exec_func_async(func, *args, **kwargs)
 
             expire = expire or PIMSCache.get_expire()
@@ -273,19 +275,18 @@ def cache_data(
                     return codec.decode(encoded)
                 data = await exec_func_async(func, *args, **kwargs)
                 encoded = codec.encode(data)
-                await backend.set(
-                    cache_key, encoded,
-                    expire or PIMSCache.get_expire()
-                )
+                await backend.set(cache_key, encoded, expire or PIMSCache.get_expire())
                 return data
 
             if_none_match = request.headers.get(HEADER_IF_NONE_MATCH.lower())
             if encoded is not None:
                 if response:
-                    cache_control_builder = \
+                    cache_control_builder = (
                         cache_control_builder or default_cache_control_builder
-                    response.headers[HEADER_CACHE_CONTROL] = \
-                        cache_control_builder(ttl=ttl)
+                    )
+                    response.headers[HEADER_CACHE_CONTROL] = cache_control_builder(
+                        ttl=ttl
+                    )
                     etag = f"W/{hash(encoded)}"
                     response.headers[HEADER_ETAG] = etag
                     response.headers[HEADER_PIMS_CACHE] = "HIT"
@@ -294,12 +295,13 @@ def cache_data(
                         return response
                 decoded = codec.decode(encoded)
                 if isinstance(decoded, Response):
-                    decoded.headers[HEADER_CACHE_CONTROL] = \
-                        response.headers.get(HEADER_CACHE_CONTROL)
-                    decoded.headers[HEADER_ETAG] = \
-                        response.headers.get(HEADER_ETAG)
-                    decoded.headers[HEADER_PIMS_CACHE] = \
-                        response.headers.get(HEADER_PIMS_CACHE)
+                    decoded.headers[HEADER_CACHE_CONTROL] = response.headers.get(
+                        HEADER_CACHE_CONTROL
+                    )
+                    decoded.headers[HEADER_ETAG] = response.headers.get(HEADER_ETAG)
+                    decoded.headers[HEADER_PIMS_CACHE] = response.headers.get(
+                        HEADER_PIMS_CACHE
+                    )
                 return decoded
 
             data = await exec_func_async(func, *args, **kwargs)
@@ -309,21 +311,24 @@ def cache_data(
                 await backend.set(cache_key_, data_, expire_)
 
             if response:
-                cache_control_builder = \
+                cache_control_builder = (
                     cache_control_builder or default_cache_control_builder
-                response.headers[HEADER_CACHE_CONTROL] = \
-                    cache_control_builder(ttl=expire)
+                )
+                response.headers[HEADER_CACHE_CONTROL] = cache_control_builder(
+                    ttl=expire
+                )
                 etag = f"W/{hash(encoded)}"
                 response.headers[HEADER_ETAG] = etag
                 response.headers[HEADER_PIMS_CACHE] = "MISS"
                 add_background_task(response, _save, cache_key, encoded, expire)
                 if isinstance(data, Response):
-                    data.headers[HEADER_CACHE_CONTROL] = \
-                        response.headers.get(HEADER_CACHE_CONTROL)
-                    data.headers[HEADER_ETAG] = \
-                        response.headers.get(HEADER_ETAG)
-                    data.headers[HEADER_PIMS_CACHE] = \
-                        response.headers.get(HEADER_PIMS_CACHE)
+                    data.headers[HEADER_CACHE_CONTROL] = response.headers.get(
+                        HEADER_CACHE_CONTROL
+                    )
+                    data.headers[HEADER_ETAG] = response.headers.get(HEADER_ETAG)
+                    data.headers[HEADER_PIMS_CACHE] = response.headers.get(
+                        HEADER_PIMS_CACHE
+                    )
                     data.background = response.background
             else:
                 await _save(cache_key, encoded, expire)
@@ -338,7 +343,7 @@ def cache_data(
 def cache_image_response(
     expire: int = None,
     vary: Optional[List] = None,
-    supported_mimetypes=None
+    supported_mimetypes=None,
 ):
     if supported_mimetypes is None:
         supported_mimetypes = VISUALISATION_MIMETYPES
