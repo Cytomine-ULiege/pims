@@ -51,7 +51,7 @@ def reorder_plugins(
         if name not in NON_PLUGINS_MODULES:
             plugin_resolution_orders[name] = 0
 
-    with open(csv_path, "r") as file:
+    with open(csv_path, "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
 
         for row in reader:
@@ -95,7 +95,7 @@ def _discover_format_plugins() -> List[Union[str, EntryPoint]]:
     ]
     plugins += entry_points(group=PLUGIN_GROUP)
 
-    plugin_names = [p.module if type(p) is EntryPoint else p for p in plugins]
+    plugin_names = [p.module if isinstance(p, EntryPoint) else p for p in plugins]
 
     if os.path.isfile(get_settings().checker_resolution_file):
         plugins = reorder_plugins(plugins, get_settings().checker_resolution_file)
@@ -122,7 +122,7 @@ def _find_formats_in_module(mod: ModuleType) -> List[Type[AbstractFormat]]:
     formats: list
         The format classes
     """
-    formats = list()
+    formats = []
     for _, name, _ in iter_modules(mod.__path__):
         submodule_name = f"{mod.__name__}.{name}"
         try:
@@ -160,9 +160,9 @@ def _get_all_formats() -> List[Type[AbstractFormat]]:
     formats: list
         The format classes
     """
-    formats = list()
+    formats = []
     for plugin in FORMAT_PLUGINS:
-        entrypoint_plugin = type(plugin) is EntryPoint
+        entrypoint_plugin = isinstance(plugin, EntryPoint)
 
         module_name = plugin.module if entrypoint_plugin else plugin
         logger.info(
