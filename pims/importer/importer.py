@@ -11,37 +11,46 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+# pylint: disable=broad-exception-caught,unused-import
+
 import logging
-import os
 import shutil
 from typing import List, Optional
-import aiofiles
 
 from celery import group, signature
 from celery.result import allow_join_result
 from fastapi import Request, UploadFile  # noqa
 
 from pims.api.exceptions import (
-    BadRequestException, FilepathNotFoundProblem,
-    NoMatchingFormatProblem
+    BadRequestException,
+    FilepathNotFoundProblem,
+    NoMatchingFormatProblem,
 )
 from pims.api.utils.models import HistogramType
 from pims.config import get_settings
 from pims.files.archive import Archive, ArchiveError
 from pims.files.file import (
-    EXTRACTED_DIR, HISTOGRAM_STEM, ORIGINAL_STEM, PROCESSED_DIR, Path,
-    SPATIAL_STEM, UPLOAD_DIR_PREFIX
+    EXTRACTED_DIR,
+    HISTOGRAM_STEM,
+    ORIGINAL_STEM,
+    PROCESSED_DIR,
+    SPATIAL_STEM,
+    UPLOAD_DIR_PREFIX,
+    Path,
 )
 from pims.files.histogram import Histogram
 from pims.files.image import Image
 from pims.formats import AbstractFormat
 from pims.formats.utils.factories import (
     ImportableFormatFactory,
-    SpatialReadableFormatFactory
+    SpatialReadableFormatFactory,
 )
 from pims.importer.listeners import (
-    CytomineListener, ImportEventType, ImportListener,
-    StdoutListener
+    CytomineListener,
+    ImportEventType,
+    ImportListener,
+    StdoutListener,
 )
 from pims.processing.histograms.utils import build_histogram_file
 from pims.tasks.queue import BG_TASK_MAPPING, CELERY_TASK_MAPPING, Task, func_from_str
@@ -99,8 +108,10 @@ class FileImporter:
     histogram: Optional[Histogram]
 
     def __init__(
-        self, pending_file: Path, pending_name: Optional[str] = None,
-        listeners: Optional[List[ImportListener]] = None
+        self,
+        pending_file: Path,
+        pending_name: Optional[str] = None,
+        listeners: Optional[List[ImportListener]] = None,
     ):
         """
         Parameters
@@ -135,7 +146,7 @@ class FileImporter:
                 getattr(listener, method)(*args, **kwargs)
             except AttributeError as e:
                 log.error(e)
-                log.warning(f"No method {method} for import listener {listener}")
+                log.warning("No method %s for import listener %s", method, listener)
 
     def run(self, prefer_copy: bool = False):
         """
@@ -157,17 +168,15 @@ class FileImporter:
 
             # Check the file is in pending area,
             # or comes from a extracted collection
-            if (not self.pending_file.is_extracted() and
-                (self.pending_file.parent != WRITING_PATH and self.pending_file.parent != PENDING_PATH)) \
-                    or not self.pending_file.exists():
+            if (
+                not self.pending_file.is_extracted()
+                and self.pending_file.parent not in (WRITING_PATH, PENDING_PATH)
+            ) or not self.pending_file.exists():
                 self.notify(ImportEventType.FILE_NOT_FOUND, self.pending_file)
                 raise FilepathNotFoundProblem(self.pending_file)
 
             # Move the file to PIMS root path
-            upload_dir_name = Path(
-                f"{UPLOAD_DIR_PREFIX}"
-                f"{str(unique_name_generator())}"
-            )
+            upload_dir_name = Path(f"{UPLOAD_DIR_PREFIX}{unique_name_generator()}")
             self.upload_dir = FILE_ROOT_PATH / upload_dir_name
             self.mkdir(self.upload_dir)
 
@@ -186,7 +195,8 @@ class FileImporter:
 
             self.notify(
                 ImportEventType.MOVED_PENDING_FILE,
-                self.pending_file, self.upload_path
+                self.pending_file,
+                self.upload_path,
             )
             self.notify(ImportEventType.END_DATA_EXTRACTION, self.upload_path)
 
@@ -204,32 +214,26 @@ class FileImporter:
             if format is None:
                 self.notify(ImportEventType.ERROR_NO_FORMAT, self.upload_path)
                 raise NoMatchingFormatProblem(self.upload_path)
-            self.notify(
-                ImportEventType.END_FORMAT_DETECTION,
-                self.upload_path, format
-            )
+            self.notify(ImportEventType.END_FORMAT_DETECTION, self.upload_path, format)
 
             # Create processed dir
             self.processed_dir = self.upload_dir / Path(PROCESSED_DIR)
             self.mkdir(self.processed_dir)
 
             # Create original role
-            original_filename = Path(
-                f"{ORIGINAL_STEM}.{format.get_identifier()}"
-            )
+            original_filename = Path(f"{ORIGINAL_STEM}.{format.get_identifier()}")
             self.original_path = self.processed_dir / original_filename
             if archive:
                 try:
-                    self.notify(
-                        ImportEventType.START_UNPACKING, self.upload_path
-                    )
+                    self.notify(ImportEventType.START_UNPACKING, self.upload_path)
                     archive.extract(self.original_path)
                 except ArchiveError as e:
                     self.notify(
-                        ImportEventType.ERROR_UNPACKING, self.upload_path,
-                        exception=e
+                        ImportEventType.ERROR_UNPACKING,
+                        self.upload_path,
+                        exception=e,
                     )
-                    raise FileErrorProblem(self.upload_path)
+                    raise FileErrorProblem(self.upload_path) from e
 
                 # Now the archive is extracted, check if it's a multi-file format
                 format = format_factory.match(self.original_path)
@@ -244,20 +248,23 @@ class FileImporter:
                     format = format.__class__(self.original_path)
 
                     self.notify(
-                        ImportEventType.END_UNPACKING, self.upload_path,
-                        self.original_path, format=format, is_collection=False
+                        ImportEventType.END_UNPACKING,
+                        self.upload_path,
+                        self.original_path,
+                        format=format,
+                        is_collection=False,
                     )
                     self.upload_path = self.original_path
                 else:
                     self.extracted_dir = self.processed_dir / Path(EXTRACTED_DIR)
                     self.mksymlink(self.extracted_dir, self.original_path)
 
-                    collection = self.import_collection(
-                        self.original_path, prefer_copy
-                    )
+                    collection = self.import_collection(self.original_path, prefer_copy)
                     self.notify(
-                        ImportEventType.END_UNPACKING, self.upload_path,
-                        self.original_path, is_collection=True
+                        ImportEventType.END_UNPACKING,
+                        self.upload_path,
+                        self.original_path,
+                        is_collection=True,
                     )
                     return collection
             else:
@@ -270,8 +277,9 @@ class FileImporter:
             errors = self.original.check_integrity(check_metadata=True)
             if len(errors) > 0:
                 self.notify(
-                    ImportEventType.ERROR_INTEGRITY_CHECK, self.original_path,
-                    integrity_errors=errors
+                    ImportEventType.ERROR_INTEGRITY_CHECK,
+                    self.original_path,
+                    integrity_errors=errors,
                 )
                 raise ImageParsingProblem(self.original)
             self.notify(ImportEventType.END_INTEGRITY_CHECK, self.original)
@@ -286,14 +294,12 @@ class FileImporter:
             # Finished
             self.notify(
                 ImportEventType.END_SUCCESSFUL_IMPORT,
-                self.upload_path, self.original
+                self.upload_path,
+                self.original,
             )
             return [self.upload_path]
         except Exception as e:
-            self.notify(
-                ImportEventType.FILE_ERROR,
-                self.upload_path, exeception=e
-            )
+            self.notify(ImportEventType.FILE_ERROR, self.upload_path, exception=e)
             raise e
 
     def deploy_spatial(self, format: AbstractFormat) -> Image:
@@ -310,22 +316,21 @@ class FileImporter:
                 self.spatial_path = self.processed_dir / spatial_filename
                 self.notify(
                     ImportEventType.START_CONVERSION,
-                    self.spatial_path, self.upload_path
+                    self.spatial_path,
+                    self.upload_path,
                 )
 
                 r = format.convert(self.spatial_path)
                 if not r or not self.spatial_path.exists():
-                    self.notify(
-                        ImportEventType.ERROR_CONVERSION,
-                        self.spatial_path
-                    )
+                    self.notify(ImportEventType.ERROR_CONVERSION, self.spatial_path)
                     raise FormatConversionProblem()
             except Exception as e:
                 self.notify(
                     ImportEventType.ERROR_CONVERSION,
-                    self.spatial_path, exception=e
+                    self.spatial_path,
+                    exception=e,
                 )
-                raise FormatConversionProblem()
+                raise FormatConversionProblem() from e
 
             self.notify(ImportEventType.END_CONVERSION, self.spatial_path)
 
@@ -337,7 +342,8 @@ class FileImporter:
                 raise NoMatchingFormatProblem(self.spatial_path)
             self.notify(
                 ImportEventType.END_FORMAT_DETECTION,
-                self.spatial_path, spatial_format
+                self.spatial_path,
+                spatial_format,
             )
 
             self.spatial = Image(self.spatial_path, format=spatial_format)
@@ -347,8 +353,9 @@ class FileImporter:
             errors = self.spatial.check_integrity(check_metadata=True)
             if len(errors) > 0:
                 self.notify(
-                    ImportEventType.ERROR_INTEGRITY_CHECK, self.spatial_path,
-                    integrity_errors=errors
+                    ImportEventType.ERROR_INTEGRITY_CHECK,
+                    self.spatial_path,
+                    integrity_errors=errors,
                 )
                 raise ImageParsingProblem(self.spatial)
             self.notify(ImportEventType.END_INTEGRITY_CHECK, self.spatial)
@@ -370,25 +377,19 @@ class FileImporter:
         efficient histogram requests.
         """
         self.histogram_path = self.processed_dir / Path(HISTOGRAM_STEM)
-        self.notify(
-            ImportEventType.START_HISTOGRAM_DEPLOY,
-            self.histogram_path, image
-        )
+        self.notify(ImportEventType.START_HISTOGRAM_DEPLOY, self.histogram_path, image)
         try:
             self.histogram = build_histogram_file(
                 image, self.histogram_path, HistogramType.FAST
             )
         except (FileNotFoundError, FileExistsError) as e:
             self.notify(
-                ImportEventType.ERROR_HISTOGRAM, self.histogram_path, image,
-                exception=e
+                ImportEventType.ERROR_HISTOGRAM, self.histogram_path, image, exception=e
             )
-            raise FileErrorProblem(self.histogram_path)
+            raise FileErrorProblem(self.histogram_path) from e
 
         assert self.histogram.has_histogram_role()
-        self.notify(
-            ImportEventType.END_HISTOGRAM_DEPLOY, self.histogram_path, image
-        )
+        self.notify(ImportEventType.END_HISTOGRAM_DEPLOY, self.histogram_path, image)
         return self.histogram
 
     def mkdir(self, directory: Path):
@@ -397,7 +398,7 @@ class FileImporter:
             directory.mkdir()  # TODO: mode
         except (FileNotFoundError, FileExistsError, OSError) as e:
             self.notify(ImportEventType.FILE_ERROR, directory, exception=e)
-            raise FileErrorProblem(directory)
+            raise FileErrorProblem(directory) from e
 
     def move(self, origin: Path, dest: Path, prefer_copy: bool = False):
         """Move origin to dest (with notifications)"""
@@ -408,18 +409,15 @@ class FileImporter:
                 shutil.move(origin, dest)
         except (FileNotFoundError, FileExistsError, OSError) as e:
             self.notify(ImportEventType.FILE_NOT_MOVED, origin, exception=e)
-            raise FileErrorProblem(origin)
+            raise FileErrorProblem(origin) from e
 
     def mksymlink(self, path: Path, target: Path):
         """Make a symlink from path to target (with notifications)"""
         try:
-            path.symlink_to(
-                target,
-                target_is_directory=target.is_dir()
-            )
+            path.symlink_to(target, target_is_directory=target.is_dir())
         except (FileNotFoundError, FileExistsError, OSError) as e:
             self.notify(ImportEventType.FILE_ERROR, path, exception=e)
-            raise FileErrorProblem(path)
+            raise FileErrorProblem(path) from e
 
     def import_collection(self, collection: Path, prefer_copy: bool = False):
         """Import recursively children of the collection."""
@@ -433,24 +431,25 @@ class FileImporter:
         else:
             task = Task.IMPORT
 
-        imported = list()
+        imported = []
         format_factory = ImportableFormatFactory()
-        tasks = list()
+        tasks = []
         # Collection children are extracted recursively into collection
         # directories, until the directory is an image format (we can thus have
         # multi-file formats as directories in a collection).
         for child in collection.get_extracted_children(
-                stop_recursion_cond=format_factory.match
+            stop_recursion_cond=format_factory.match
         ):
-            self.notify(
-                ImportEventType.REGISTER_FILE, child, self.upload_path
-            )
+            self.notify(ImportEventType.REGISTER_FILE, child, self.upload_path)
             try:
                 if cytomine:
                     new_listener = cytomine.new_listener_from_registered_child(child)
                     args = [
-                        new_listener.auth, str(child), child.name,
-                        new_listener, prefer_copy
+                        new_listener.auth,
+                        str(child),
+                        child.name,
+                        new_listener,
+                        prefer_copy,
                     ]
                 else:
                     args = [str(child), child.name, prefer_copy]
@@ -468,10 +467,12 @@ class FileImporter:
             _sequential_imports()
         else:
             try:
-                task_group = group([
-                    signature(CELERY_TASK_MAPPING.get(name), args_)
-                    for name, args_ in tasks
-                ])
+                task_group = group(
+                    [
+                        signature(CELERY_TASK_MAPPING.get(name), args_)
+                        for name, args_ in tasks
+                    ]
+                )
                 # WARNING !
                 # These tasks are synchronous with respect to the parent task (the archive)
                 # It is required to update the parent (the archive) status when everything is
@@ -483,7 +484,7 @@ class FileImporter:
                 with allow_join_result():
                     r = task_group.apply_async()
                     r.get()  # Wait for group to finish
-            except Exception as e:  # noqa
+            except Exception:  # noqa
                 # WARNING !
                 # Catch too many exceptions such as those related to import logic ?
                 # TODO: identify Celery exception raised when trying to use it while rabbitmq is
@@ -495,13 +496,15 @@ class FileImporter:
 
 
 def run_import(
-    filepath: str, name: str, extra_listeners: Optional[List[ImportListener]] = None,
-    prefer_copy: bool = False
+    filepath: str,
+    name: str,
+    extra_listeners: Optional[List[ImportListener]] = None,
+    prefer_copy: bool = False,
 ):
     pending_file = Path(filepath)
 
     if extra_listeners is not None:
-        if not type(extra_listeners) is list:
+        if not isinstance(extra_listeners, list):
             extra_listeners = list(extra_listeners)
     else:
         extra_listeners = []
