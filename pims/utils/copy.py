@@ -11,12 +11,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import copy
 from itertools import chain
 
 
 class SafelyCopiable:
-    UNSAFE_DEEPCOPY_ATTRS = ('_cache',)
+    UNSAFE_DEEPCOPY_ATTRS = ("_cache",)
 
     def _copy__new(self):
         cls = self.__class__
@@ -31,8 +32,7 @@ class SafelyCopiable:
 
         # Get all __slots__ of the derived class
         slots = chain.from_iterable(
-            getattr(s, '__slots__', [])
-            for s in self.__class__.__mro__
+            getattr(s, "__slots__", []) for s in self.__class__.__mro__
         )
 
         # Copy all slot attributes
@@ -64,18 +64,14 @@ class SafelyCopiable:
 
         # Get all __slots__ of the derived class
         slots = chain.from_iterable(
-            getattr(s, '__slots__', [])
-            for s in self.__class__.__mro__
+            getattr(s, "__slots__", []) for s in self.__class__.__mro__
         )
 
         # Deep copy all other attributes
         for var in slots:
             try:
-                setattr(
-                    result, var,
-                    copy.deepcopy(getattr(self, var), memo)  # noqa
-                )
-            except AttributeError as e:
+                setattr(result, var, copy.deepcopy(getattr(self, var), memo))  # noqa
+            except AttributeError:
                 pass
 
         # Return updated instance

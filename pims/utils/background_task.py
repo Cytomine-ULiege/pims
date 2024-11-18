@@ -11,6 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import typing
 
 from starlette.background import BackgroundTask, BackgroundTasks
@@ -18,8 +19,10 @@ from starlette.responses import Response
 
 
 def add_background_task(
-    response: Response, func: typing.Callable,
-    *args: typing.Any, **kwargs: typing.Any
+    response: Response,
+    func: typing.Callable,
+    *args: typing.Any,
+    **kwargs: typing.Any,
 ):
     if isinstance(response.background, BackgroundTasks):
         response.background.add_task(func, *args, **kwargs)

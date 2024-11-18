@@ -11,11 +11,14 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from typing import Tuple, Union
 
 
 def get_rationed_resizing(
-    resized: Union[int, float], length: int, other_length: int
+    resized: Union[int, float],
+    length: int,
+    other_length: int,
 ) -> Tuple[int, int]:
     """
     Get resized lengths for `length` and `other_length` according to
@@ -37,8 +40,8 @@ def get_rationed_resizing(
     other_resized : int
         Other resized length according ratio.
     """
-    ratio = resized if type(resized) == float else resized / length
-    resized = resized if type(resized) == int else round(ratio * length)
+    ratio = resized if isinstance(resized, float) else resized / length
+    resized = resized if isinstance(resized, int) else round(ratio * length)
     other_resized = round(ratio * other_length)
     return resized, other_resized
 
@@ -48,7 +51,7 @@ def max_intensity(bitdepth: int, count: bool = False):
     Get maximum intensity for a given bitdepth.
     To get number of possible intensities, set `count` to True.
     """
-    mi = 2 ** bitdepth
+    mi = 2**bitdepth
     if not count:
         mi -= 1
     return mi

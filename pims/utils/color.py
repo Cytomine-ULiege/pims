@@ -12,13 +12,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# pylint: disable=no-name-in-module
+
 from typing import List, Optional, Union
 
 import numpy as np
-from pydantic.color import (
-    Color as PydanticColor, ColorError, ColorType as PydanticColorType,
-    RGBA, float_to_255, ints_to_rgba, parse_str, parse_tuple
-)
+from pydantic.color import RGBA
+from pydantic.color import Color as PydanticColor
+from pydantic.color import ColorError
+from pydantic.color import ColorType as PydanticColorType
+from pydantic.color import float_to_255, ints_to_rgba, parse_str, parse_tuple
 
 ColorType = Union[PydanticColorType, int]
 
@@ -37,7 +40,7 @@ class Color(PydanticColor):
             self._rgba = value._rgba
             value = value._original
         else:
-            raise ColorError(reason='value must be a tuple, list, int or string')
+            raise ColorError(reason="value must be a tuple, list, int or string")
 
         # if we've got here value must be a valid color
         self._original = value
@@ -58,13 +61,13 @@ class Color(PydanticColor):
         if alpha is None:
             if self._rgba.alpha is None:
                 return r, g, b
-            else:
-                return r, g, b, self._alpha_float()
-        elif alpha:
             return r, g, b, self._alpha_float()
-        else:
-            # alpha is False
-            return r, g, b
+
+        if alpha:
+            return r, g, b, self._alpha_float()
+
+        # alpha is False
+        return r, g, b
 
     def as_int(self, alpha: Optional[bool] = None) -> int:
         """
@@ -176,8 +179,10 @@ def is_rgb(colors: List[Color]) -> bool:
 
 
 def infer_channel_color(
-    color_name: Optional[ColorType], index: int, n_channels: Optional[int] = None,
-    channel_color_list: List[Color] = None
+    color_name: Optional[ColorType],
+    index: int,
+    n_channels: Optional[int] = None,
+    channel_color_list: List[Color] = None,
 ) -> Union[Color, None]:
     """
     Try to infer a color for an image channel.
@@ -197,7 +202,7 @@ def infer_channel_color(
     inferred_color
     """
 
-    name_convertor = dict(R="red", G="lime", B="blue")
+    name_convertor = {"R": "red", "G": "lime", "B": "blue"}
     color_name = name_convertor.get(color_name, color_name)
 
     try:
@@ -207,9 +212,7 @@ def infer_channel_color(
 
     if channel_color_list is None:
         # True green is called 'lime' in CSS
-        channel_color_list = (
-            "red", "lime", "blue", "cyan", "magenta", "yellow"
-        )
+        channel_color_list = ("red", "lime", "blue", "cyan", "magenta", "yellow")
 
     if n_channels is not None:
         # To improve: knowing n_channels can help to infer channel color
