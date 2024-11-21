@@ -402,11 +402,3 @@ async def _show_drawing(
         z_reduction,
         t_reduction,
     )
-
-
-def show_spectra(filepath, body):
-    pass
-
-
-def show_footprint(filepath, body):
-    pass
