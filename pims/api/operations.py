@@ -166,10 +166,6 @@ async def import_direct_chunks(
         )
 
 
-def import_(filepath, body):
-    pass
-
-
 @router.get("/file/{filepath:path}/export", tags=["Export"])
 def export_file(background: BackgroundTasks, path: Path = Depends(filepath_parameter)):
     """
@@ -226,10 +222,6 @@ def export_upload(
         media_type = "application/zip"
 
     return FileResponse(upload_file, media_type=media_type, filename=upload_file.name)
-
-
-def delete(filepath):
-    pass
 
 
 async def write_file(fastapi_parser: MultiPartParser, pending_path):
